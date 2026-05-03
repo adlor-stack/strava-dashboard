@@ -1,0 +1,9 @@
+{
+  "name": "strava-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "cookie": "^0.6.0",
+    "iron-session": "^8.0.1"
+  }
+}

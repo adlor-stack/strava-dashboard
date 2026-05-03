@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strava Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --or: #FC4C02;
+  --or2: #c93900;
+  --bg: #080808;
+  --s1: #111;
+  --s2: #181818;
+  --s3: #202020;
+  --bd: #242424;
+  --bd2: #2e2e2e;
+  --tx: #efefef;
+  --tx2: #888;
+  --tx3: #444;
+  --gr: #27ae60;
+  --re: #e74c3c;
+  --bl: #2980b9;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'Barlow', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════
+   LOGIN SCREEN
+══════════════════════════════ */
+#login {
+  display: none;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+#login::before {
+  content: 'STRAVA';
+  position: absolute;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 30vw;
+  color: var(--s2);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  padding: 48px 40px;
+  animation: fadeUp 0.5s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--or);
+  margin-bottom: 24px;
+}
+
+.login-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 0.95;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.login-title em {
+  font-style: normal;
+  color: var(--or);
+}
+
+.login-sub {
+  color: var(--tx2);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.btn-strava {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--or);
+  color: #fff;
+  border: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 18px 24px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-strava:hover { background: var(--or2); transform: translateY(-1px); }
+.btn-strava:active { transform: translateY(0); }
+
+.btn-strava svg { width: 20px; height: 20px; fill: white; flex-shrink: 0; }
+
+.login-note {
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--tx3);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.error-msg {
+  display: none;
+  background: #1a0808;
+  border: 1px solid #4a1515;
+  color: #e57373;
+  font-size: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════
+   APP
+══════════════════════════════ */
+#app { display: none; }
+
+/* Header */
+.hdr {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(8,8,8,0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bd);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 20px;
+}
+
+.hdr-logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--or);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.hdr-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--bd);
+  flex-shrink: 0;
+}
+
+.hdr-athlete {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.hdr-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--bd2);
+  object-fit: cover;
+  background: var(--s2);
+}
+
+.hdr-name {
+  font-size: 13px;
+  color: var(--tx2);
+  font-weight: 400;
+}
+
+.hdr-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.countdown-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--tx3);
+}
+
+.pulse-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gr);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.hdr-btn {
+  background: none;
+  border: 1px solid var(--bd);
+  color: var(--tx2);
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.hdr-btn:hover { border-color: var(--or); color: var(--or); }
+
+/* Main */
+.main {
+  padding: 28px 28px 48px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Period selector */
+.periods {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 24px;
+}
+
+.p-btn {
+  background: none;
+  border: 1px solid var(--bd);
+  color: var(--tx2);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.p-btn:hover { color: var(--tx); border-color: var(--bd2); }
+.p-btn.on { background: var(--or); border-color: var(--or); color: #fff; }
+
+/* Stats grid */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  background: var(--bd);
+  border: 1px solid var(--bd);
+  margin-bottom: 20px;
+}
+
+@media(max-width:1100px){ .stats { grid-template-columns: repeat(3,1fr); } }
+@media(max-width:640px) { .stats { grid-template-columns: repeat(2,1fr); } }
+
+.s-card {
+  background: var(--s1);
+  padding: 22px 20px 18px;
+  transition: background 0.1s;
+}
+
+.s-card:hover { background: var(--s2); }
+
+.s-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx3);
+  margin-bottom: 10px;
+}
+
+.s-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.s-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--tx2);
+  margin-left: 2px;
+}
+
+.s-sub {
+  font-size: 11px;
+  color: var(--tx3);
+  margin-top: 6px;
+}
+
+/* Charts */
+.charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1px;
+  background: var(--bd);
+  border: 1px solid var(--bd);
+  margin-bottom: 20px;
+}
+
+@media(max-width:800px){ .charts { grid-template-columns: 1fr; } }
+
+.chart-box {
+  background: var(--s1);
+  padding: 22px 22px 18px;
+}
+
+.panel-hd {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx3);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-h { position: relative; height: 210px; }
+
+/* Activity feed */
+.feed {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+}
+
+.feed-hd {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--bd);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feed-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+
+.feed-count { font-size: 11px; color: var(--tx3); }
+
+table { width: 100%; border-collapse: collapse; }
+
+thead th {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--tx3);
+  text-align: left;
+  padding: 11px 22px;
+  border-bottom: 1px solid var(--bd);
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--bd);
+  cursor: default;
+  transition: background 0.1s;
+}
+
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--s2); }
+
+tbody td {
+  padding: 13px 22px;
+  font-size: 12.5px;
+}
+
+.td-date { color: var(--tx2); white-space: nowrap; }
+.td-name { max-width: 200px; }
+.td-name-inner { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  background: var(--bg);
+  color: var(--tx3);
+  border: 1px solid var(--bd);
+  white-space: nowrap;
+}
+
+.td-n {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.td-m { color: var(--tx2); font-size: 12px; }
+
+/* Loading overlay */
+#loader {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.loader-word {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--or);
+  animation: pulse2 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse2 { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+.loader-sub {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+
+/* Error toast */
+#err-bar {
+  display: none;
+  background: #150505;
+  border: 1px solid #3d1010;
+  color: #e57373;
+  font-size: 12px;
+  padding: 11px 20px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-word">STRAVA</div>
+  <div class="loader-sub" id="loader-txt">Chargement...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-eyebrow">Dashboard Strava</div>
+    <h1 class="login-title">Tes stats.<br><em>Vraiment.</em></h1>
+    <p class="login-sub">Connecte ton compte Strava pour accéder à ton tableau de bord personnel : volume, allure, dénivelé, FC — tout en un seul endroit.</p>
+    <div class="error-msg" id="login-error"></div>
+    <a href="/api/login" class="btn-strava">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+      Se connecter avec Strava
+    </a>
+    <p class="login-note">Tes données restent sur Strava.<br>On ne stocke rien côté serveur.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="hdr">
+    <div class="hdr-logo">Strava</div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-athlete">
+      <img class="hdr-avatar" id="hdr-avatar" src="" alt="">
+      <span class="hdr-name" id="hdr-name"></span>
+    </div>
+    <div class="hdr-right">
+      <div class="countdown-wrap">
+        <div class="pulse-dot"></div>
+        <span id="countdown-txt"></span>
+      </div>
+      <button class="hdr-btn" onclick="refresh()">↻ Actualiser</button>
+      <a href="/api/logout" class="hdr-btn">Déconnexion</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <div id="err-bar"></div>
+
+    <div class="periods">
+      <button class="p-btn on" onclick="setPeriod(7,this)">7J</button>
+      <button class="p-btn" onclick="setPeriod(30,this)">30J</button>
+      <button class="p-btn" onclick="setPeriod(90,this)">90J</button>
+      <button class="p-btn" onclick="setPeriod(365,this)">1AN</button>
+      <button class="p-btn" onclick="setPeriod(0,this)">TOUT</button>
+    </div>
+
+    <div class="stats">
+      <div class="s-card">
+        <div class="s-lbl">Activités</div>
+        <div class="s-val" id="v-count">—</div>
+        <div class="s-sub" id="s-count"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">Distance</div>
+        <div class="s-val" id="v-dist">—</div>
+        <div class="s-sub" id="s-dist"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">Dénivelé +</div>
+        <div class="s-val" id="v-elev">—</div>
+        <div class="s-sub" id="s-elev"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">Temps total</div>
+        <div class="s-val" id="v-time">—</div>
+        <div class="s-sub" id="s-time"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">Allure moy.</div>
+        <div class="s-val" id="v-pace">—</div>
+        <div class="s-sub" id="s-pace"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">FC moy.</div>
+        <div class="s-val" id="v-hr">—</div>
+        <div class="s-sub" id="s-hr"></div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box">
+        <div class="panel-hd"><span>Distance / semaine</span><span id="chart-lbl"></span></div>
+        <div class="chart-h"><canvas id="c-weekly"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="panel-hd"><span>Types</span></div>
+        <div class="chart-h"><canvas id="c-types"></canvas></div>
+      </div>
+    </div>
+
+    <div class="feed">
+      <div class="feed-hd">
+        <div class="feed-title">Activités récentes</div>
+        <div class="feed-count" id="feed-count"></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Dist.</th>
+            <th>Durée</th>
+            <th>D+</th>
+            <th>Allure</th>
+            <th>FC</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────
+const S = {
+  all: [],
+  filtered: [],
+  days: 7,
+  charts: {},
+  countdown: 300,
+  timer: null
+};
+
+const INTERVAL = 300; // 5 min
+
+// ─── BOOT ─────────────────────────────────────────────
+(async () => {
+  // Lire les params URL pour les erreurs OAuth
+  const params = new URLSearchParams(location.search);
+  const err = params.get('error');
+
+  // Vérifier la session
+  loader(true, 'Vérification...');
+  try {
+    const me = await fetch('/api/me').then(r => r.json());
+    if (!me.authenticated) {
+      loader(false);
+      showLogin(err);
+      return;
+    }
+    setAthlete(me.athlete);
+    loader(false);
+    show('app');
+    await loadActivities();
+    startCountdown();
+  } catch {
+    loader(false);
+    showLogin(err);
+  }
+})();
+
+// ─── AUTH / NAVIGATION ────────────────────────────────
+function showLogin(errCode) {
+  show('login');
+  if (errCode) {
+    const msgs = {
+      access_denied: "Tu as refusé l'accès à Strava.",
+      token_exchange: "Erreur lors de la connexion. Réessaie.",
+      server_error: "Erreur serveur. Réessaie dans quelques instants."
+    };
+    showLoginError(msgs[errCode] || "Erreur inattendue. Réessaie.");
+    history.replaceState({}, '', '/');
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── DATA ─────────────────────────────────────────────
+async function loadActivities() {
+  loader(true, 'Chargement des activités...');
+  showErr(null);
+  try {
+    const acts = await fetchAll();
+    S.all = acts;
+    loader(false);
+    apply();
+  } catch (e) {
+    loader(false);
+    showErr('Erreur : ' + e.message);
+  }
+}
+
+async function fetchAll() {
+  let page = 1, all = [];
+  while (true) {
+    const batch = await api(`/athlete/activities`, { per_page: 100, page });
+    if (!Array.isArray(batch) || !batch.length) break;
+    all = all.concat(batch);
+    if (batch.length < 100 || page >= 10) break;
+    page++;
+  }
+  return all;
+}
+
+async function api(path, params = {}) {
+  const url = new URL('/api/strava', location.origin);
+  url.searchParams.set('path', path);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url);
+  if (res.status === 401) { location.href = '/'; throw new Error('Session expirée'); }
+  return res.json();
+}
+
+async function refresh() {
+  S.countdown = INTERVAL;
+  await loadActivities();
+}
+
+// ─── PERIOD ───────────────────────────────────────────
+function setPeriod(days, btn) {
+  document.querySelectorAll('.p-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  S.days = days;
+  apply();
+}
+
+function apply() {
+  const cutoff = S.days === 0 ? 0 : Date.now() - S.days * 86400000;
+  S.filtered = S.all.filter(a => new Date(a.start_date).getTime() >= cutoff);
+  renderStats();
+  renderCharts();
+  renderTable();
+}
+
+// ─── STATS ────────────────────────────────────────────
+function renderStats() {
+  const A = S.filtered;
+  const n = A.length;
+
+  const rides = A.filter(a => a.type === 'Ride' || a.type === 'VirtualRide').length;
+  const runs  = A.filter(a => a.type === 'Run').length;
+  setV('v-count', n); setS('s-count', `${rides} vélo · ${runs} course`);
+
+  const km = A.reduce((s,a) => s + (a.distance||0), 0) / 1000;
+  setV('v-dist', `${f(km,0)}<span class="s-unit">km</span>`);
+  setS('s-dist', `moy. ${f(n ? km/n : 0, 1)} km/activité`);
+
+  const elev = A.reduce((s,a) => s + (a.total_elevation_gain||0), 0);
+  setV('v-elev', `${f(elev,0)}<span class="s-unit">m</span>`);
+  setS('s-elev', km > 0 ? `${f(elev/km,1)} m/km` : '—');
+
+  const sec = A.reduce((s,a) => s + (a.moving_time||0), 0);
+  setV('v-time', dur(sec));
+  setS('s-time', n ? dur(Math.round(sec/n)) + '/activité' : '');
+
+  const movA = A.filter(a => a.distance>0 && a.moving_time>0);
+  if (movA.length) {
+    const totM = movA.reduce((s,a)=>s+a.distance,0);
+    const totT = movA.reduce((s,a)=>s+a.moving_time,0);
+    const spk  = (totT/totM)*1000;
+    setV('v-pace', `${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')}`);
+    setS('s-pace', 'min/km (moy. pondérée)');
+  } else { setV('v-pace','—'); setS('s-pace',''); }
+
+  const hrA = A.filter(a => a.average_heartrate > 0);
+  if (hrA.length) {
+    const avg = hrA.reduce((s,a)=>s+a.average_heartrate,0)/hrA.length;
+    const max = Math.max(...hrA.map(a=>a.max_heartrate||0));
+    setV('v-hr', `${f(avg,0)}<span class="s-unit">bpm</span>`);
+    setS('s-hr', `max ${max} bpm · ${hrA.length} activités`);
+  } else { setV('v-hr','—'); setS('s-hr','Pas de données FC'); }
+}
+
+// ─── CHARTS ───────────────────────────────────────────
+const CO = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#181818',
+      borderColor: '#282828',
+      borderWidth: 1,
+      titleColor: '#555',
+      bodyColor: '#eee',
+    }
+  }
+};
+
+function renderCharts() {
+  // Weekly bar
+  const weeks = {};
+  S.filtered.forEach(a => {
+    const k = weekKey(new Date(a.start_date));
+    weeks[k] = (weeks[k]||0) + (a.distance||0)/1000;
+  });
+  const wk = Object.keys(weeks).sort();
+  const wLabels = wk.map(k => { const [,w] = k.split('-W'); return `S${w}`; });
+  const wData = wk.map(k => +weeks[k].toFixed(1));
+
+  if (S.charts.w) S.charts.w.destroy();
+  S.charts.w = new Chart(document.getElementById('c-weekly'), {
+    type: 'bar',
+    data: {
+      labels: wLabels,
+      datasets: [{
+        data: wData,
+        backgroundColor: '#FC4C0288',
+        borderColor: '#FC4C02',
+        borderWidth: 1,
+        borderRadius: 2
+      }]
+    },
+    options: {
+      ...CO,
+      plugins: { ...CO.plugins, tooltip: { ...CO.plugins.tooltip, callbacks: { label: c => ` ${c.parsed.y} km` } } },
+      scales: {
+        x: { ticks:{ color:'#444', font:{family:'Barlow',size:10} }, grid:{color:'#161616'} },
+        y: { ticks:{ color:'#444', font:{family:'Barlow',size:10}, callback:v=>v+'km' }, grid:{color:'#161616'} }
+      }
+    }
+  });
+  document.getElementById('chart-lbl').textContent = S.days===0 ? 'toutes périodes' : `${S.days} derniers jours`;
+
+  // Types donut
+  const types = {};
+  S.filtered.forEach(a => { const t = a.sport_type||a.type||'Autre'; types[t]=(types[t]||0)+1; });
+  const tLbls = Object.keys(types);
+  const tData = Object.values(types);
+  const cols  = ['#FC4C02','#ff7640','#2980b9','#27ae60','#f39c12','#8e44ad','#16a085','#d35400'];
+
+  if (S.charts.t) S.charts.t.destroy();
+  S.charts.t = new Chart(document.getElementById('c-types'), {
+    type: 'doughnut',
+    data: {
+      labels: tLbls,
+      datasets: [{ data: tData, backgroundColor: cols.slice(0,tLbls.length), borderColor:'#080808', borderWidth:3 }]
+    },
+    options: {
+      ...CO,
+      cutout: '62%',
+      plugins: {
+        legend: { display:true, position:'bottom', labels:{ color:'#555', font:{family:'Barlow',size:10}, padding:10, boxWidth:9 } },
+        tooltip: CO.plugins.tooltip
+      }
+    }
+  });
+}
+
+// ─── TABLE ────────────────────────────────────────────
+function renderTable() {
+  const rows = [...S.filtered]
+    .sort((a,b) => new Date(b.start_date)-new Date(a.start_date))
+    .slice(0, 60);
+
+  document.getElementById('feed-count').textContent = `${rows.length} / ${S.filtered.length}`;
+
+  const emoji = t => ({ Ride:'🚴', VirtualRide:'🚴', Run:'🏃', Walk:'🚶', Hike:'🥾', Swim:'🏊', WeightTraining:'🏋️', EBikeRide:'⚡' }[t]||'•');
+
+  document.getElementById('tbody').innerHTML = rows.map(a => {
+    const d    = new Date(a.start_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+    const dist = a.distance ? `${(a.distance/1000).toFixed(1)}` : '—';
+    const du   = a.moving_time ? dur(a.moving_time) : '—';
+    const el   = a.total_elevation_gain ? `${Math.round(a.total_elevation_gain)} m` : '—';
+    const pa   = a.distance&&a.moving_time ? pace(a.moving_time,a.distance) : '—';
+    const hr   = a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : '—';
+    const tp   = a.sport_type||a.type||'?';
+    return `<tr>
+      <td class="td-date">${d}</td>
+      <td class="td-name"><div class="td-name-inner" title="${esc(a.name)}">${esc(a.name)}</div></td>
+      <td><span class="badge">${emoji(tp)} ${tp}</span></td>
+      <td class="td-n">${dist}<span style="color:var(--tx2);font-size:11px;margin-left:2px">km</span></td>
+      <td class="td-m">${du}</td>
+      <td class="td-m">${el}</td>
+      <td class="td-m">${pa}</td>
+      <td class="td-m">${hr}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── COUNTDOWN ────────────────────────────────────────
+function startCountdown() {
+  clearInterval(S.timer);
+  S.countdown = INTERVAL;
+  tick();
+  S.timer = setInterval(() => {
+    S.countdown--;
+    tick();
+    if (S.countdown <= 0) { S.countdown = INTERVAL; loadActivities(); }
+  }, 1000);
+}
+
+function tick() {
+  const m = Math.floor(S.countdown/60);
+  const s = S.countdown%60;
+  const t = document.getElementById('countdown-txt');
+  if (t) t.textContent = `Actualisation dans ${m>0?m+'m ':''}${String(s).padStart(2,'0')}s`;
+}
+
+// ─── HELPERS ──────────────────────────────────────────
+function setAthlete(a) {
+  const n = document.getElementById('hdr-name');
+  const av = document.getElementById('hdr-avatar');
+  if (n) n.textContent = `${a.firstname||''} ${a.lastname||''}`.trim();
+  if (av && a.profile) av.src = a.profile;
+}
+
+function setV(id, html) { const el = document.getElementById(id); if(el) el.innerHTML = String(html); }
+function setS(id, txt)  { const el = document.getElementById(id); if(el) el.textContent = txt; }
+
+function f(n, dec) { return parseFloat(n).toFixed(dec).replace('.',','); }
+
+function dur(sec) {
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
+}
+
+function pace(sec, m) {
+  const spk = (sec/m)*1000;
+  return `${Math.floor(spk/60)}:${String(Math.round(spk%60)).padStart(2,'0')} /km`;
+}
+
+function weekKey(d) {
+  const dt = new Date(d); dt.setHours(0,0,0,0);
+  dt.setDate(dt.getDate()+3-(dt.getDay()+6)%7);
+  const w1 = new Date(dt.getFullYear(),0,4);
+  const wn = 1+Math.round(((dt-w1)/86400000-3+(w1.getDay()+6)%7)/7);
+  return `${dt.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+function loader(show, txt) {
+  const el = document.getElementById('loader');
+  el.style.display = show ? 'flex' : 'none';
+  if (txt) { const t = document.getElementById('loader-txt'); if(t) t.textContent = txt; }
+}
+
+function show(id) {
+  ['login','app'].forEach(i => document.getElementById(i).style.display = i===id ? (i==='login'?'flex':'block') : 'none');
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-bar');
+  if (!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  if (msg) el.textContent = msg;
+}
+</script>
+</body>
+</html>

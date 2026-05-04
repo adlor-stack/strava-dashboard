@@ -183,35 +183,6 @@ tbody td{padding:10px 12px;font-size:12px}
 </style>
 </head>
 <body>
-<!-- LOGIN SCREEN -->
-<div id="login-screen" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg);position:relative;overflow:hidden">
-  <div style="position:absolute;font-family:'Inter',sans-serif;font-weight:800;font-size:28vw;color:rgba(0,0,0,.03);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;letter-spacing:-.04em">TRAIN</div>
-  <div style="position:relative;z-index:1;width:100%;max-width:400px;background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
-      <div style="width:36px;height:36px;background:var(--or);border-radius:8px;display:flex;align-items:center;justify-content:center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-      </div>
-      <span style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--or)">Training Dashboard</span>
-    </div>
-    <h1 style="font-size:40px;font-weight:800;line-height:1;margin-bottom:10px;color:var(--tx)">Prépare ton<br><span style="color:var(--or)">objectif.</span></h1>
-    <p style="color:var(--tx2);font-size:13px;line-height:1.7;margin-bottom:32px">Plan d'entraînement adaptatif, suivi Strava en temps réel, prédiction de performance.</p>
-    <div id="login-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:12px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
-    <a href="/api/login" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--or);color:#fff;font-size:14px;font-weight:700;padding:16px 24px;text-decoration:none;border-radius:8px;box-shadow:0 2px 8px rgba(252,76,2,.3)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-      Se connecter avec Strava
-    </a>
-  </div>
-</div>
-
-<!-- LOADER -->
-<div id="app-loader" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-  <div style="font-family:'Inter',sans-serif;font-size:48px;font-weight:800;color:var(--or)">TRAIN</div>
-  <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3)" id="loader-txt">Chargement...</div>
-</div>
-
-<!-- APP CONTENT (caché jusqu'à auth) -->
-<div id="app-content" style="display:none">
-
 
 <!-- COUNTDOWN -->
 <div class="countdown-banner" id="countdown-banner">
@@ -257,7 +228,7 @@ tbody td{padding:10px 12px;font-size:12px}
     </div>
     <div class="form-grid" id="obj-grid"></div>
     <div id="obj-actions" style="display:none;margin-top:14px;display:flex;gap:8px;display:none">
-      <button class="btn btn-primary btn-sm" onclick="cancelObjEdit()">Régénérer le plan</button>
+      <button class="btn btn-primary btn-sm" onclick="saveObj()">Sauvegarder</button>
       <button class="btn btn-secondary btn-sm" onclick="cancelObjEdit()">Annuler</button>
     </div>
   </div>
@@ -268,7 +239,7 @@ tbody td{padding:10px 12px;font-size:12px}
       <div style="font-size:15px;font-weight:700">Marathon Paris — 11 avril 2027</div>
       <div style="font-size:11px;color:var(--tx2);margin-top:2px">16 semaines · 4 séances/sem · Objectif : 3h30 · Intermédiaire</div>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="alert('Plan régénéré !')">🔄 Régénérer</button>
+    <button class="btn btn-secondary btn-sm" onclick="alert('Plan régénéré !')">🔄 Reconfigurer</button>
   </div>
 
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
@@ -546,7 +517,7 @@ tbody td{padding:10px 12px;font-size:12px}
 
 <script>
 // ═══ CONSTANTS ═══
-const RACE_DATE = new Date('2027-04-11T08:00:00');
+window.RACE_DATE = new Date(OBJ.date ? OBJ.date+'T08:00:00' : '2027-10-25T08:00:00');
 const MARATHON_KM = 42.195;
 const TARGET_MIN = 210; // 3h30
 const K_CTL = 1 - 1/42, K_ATL = 1 - 1/7;
@@ -554,17 +525,17 @@ const K_CTL = 1 - 1/42, K_ATL = 1 - 1/7;
 // ═══ COUNTDOWN ═══
 function updateCountdown() {
   const now = new Date();
-  const diff = RACE_DATE - now;
+  const diff = window.window.RACE_DATE - now;
   if (diff <= 0) { document.getElementById('countdown-banner').textContent = '🏁 C\'est le jour J !'; return; }
   // Calcul exact des mois et jours restants
-  const r = RACE_DATE;
+  const r = window.RACE_DATE;
   let mo = (r.getFullYear() - now.getFullYear()) * 12 + (r.getMonth() - now.getMonth());
   // Ajuster si le jour cible dans le mois n'est pas encore atteint
   const nowDay = now.getDate(), rDay = r.getDate();
   if (nowDay > rDay) mo--;
   // Jours restants après soustraction des mois complets
   const afterMonths = new Date(now.getFullYear(), now.getMonth() + mo, now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
-  const remainMs = RACE_DATE - afterMonths;
+  const remainMs = window.RACE_DATE - afterMonths;
   const d = Math.floor(remainMs / 86400000);
   const h = Math.floor((remainMs % 86400000) / 3600000);
   const m = Math.floor((remainMs % 3600000) / 60000);
@@ -588,7 +559,10 @@ function cameron(t1,d1,d2){ return t1*(d2/cameronA(d2))/(d1/cameronA(d1)); }
 function vv(refs){ const v10=refs['10k']?(10000/(refs['10k'].timeMin*60)):null; const vs=refs.semi?(21097/(refs.semi.timeMin*60)):null; if(v10&&vs)return(MARATHON_KM*1000)/(0.54*v10+0.46*vs)/60; if(vs)return(MARATHON_KM*1000)/(vs*0.955)/60; return null; }
 function tanda(avgPaceSec,avgKm){ return Math.exp(4.63746+0.002449*avgPaceSec-0.002784*avgKm); }
 
-const HISTORY = [{week:'S3',km:32,pace:378},{week:'S4',km:38,pace:372},{week:'S5',km:35,pace:366},{week:'S6',km:44,pace:360},{week:'S7',km:48,pace:354},{week:'S8',km:48,pace:348},{week:'S9',km:52,pace:342},{week:'S10',km:46,pace:336}];
+// HISTORY est calculé dynamiquement depuis les activités Strava (rempli par la couche Strava)
+// Valeurs par défaut utilisées si pas de données Strava
+const HISTORY = [{week:'S1',weekDate:'',km:0,pace:360},{week:'S2',weekDate:'',km:0,pace:360}];
+
 
 function computeConsensus(){
   const r1=riegel(REFS.semi.timeMin,21.1,MARATHON_KM);
@@ -706,16 +680,16 @@ function updateScoreRing(){
 const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e8e8e8',borderWidth:1,titleColor:'#6b6b6b',bodyColor:'#1a1a1a'}},scales:{x:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}},y:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}}}};
 
 function initCharts(){
-  const wkLabels=WEEKLY_LOADS.map((_,i)=>`S${i+1}`);
+  const wkLabels=window.WEEKLY_LABELS||WEEKLY_LOADS.map((_,i)=>`S${i+1}`);
   const dayLabels=[]; for(let i=0;i<WEEKLY_LOADS.length*7;i++) dayLabels.push(i%7===0?`S${Math.floor(i/7)+1}`:'');
 
   // VO2max hebdo (simulé)
   const vo2Weekly=HISTORY.map((_,i)=>46+i*0.9);
-  new Chart(document.getElementById('c-vo2'),{type:'line',data:{labels:HISTORY.map(w=>w.week),datasets:[{label:'VO2max',data:vo2Weekly,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',tension:.4,fill:true},{label:'Objectif',data:HISTORY.map(()=>55),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+' ml'}}}}});
+  new Chart(document.getElementById('c-vo2'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'VO2max',data:vo2Weekly,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',tension:.4,fill:true},{label:'Objectif',data:HISTORY.map(()=>55),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+' ml'}}}}});
 
   // Prédiction hebdo
   const predWeekly=HISTORY.map((_,i)=>Math.round(248-i*1.8));
-  new Chart(document.getElementById('c-pred'),{type:'line',data:{labels:HISTORY.map(w=>w.week),datasets:[{label:'Prédit',data:predWeekly.map(v=>+(v/60).toFixed(3)),borderColor:'#FC4C02',backgroundColor:'rgba(252,76,2,.06)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#FC4C02',tension:.35,fill:true},{label:'Objectif 3h30',data:HISTORY.map(()=>3.5),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Objectif'))return' Objectif : 3h30'; const v=ctx.parsed.y,h=Math.floor(v),m=Math.round((v-h)*60); return ` Prédit : ${h}h${String(m).padStart(2,'0')}`}}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>{const h=Math.floor(v),m=Math.round((v-h)*60);return`${h}h${String(m).padStart(2,'0')}`}}}}}});
+  new Chart(document.getElementById('c-pred'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'Prédit',data:predWeekly.map(v=>+(v/60).toFixed(3)),borderColor:'#FC4C02',backgroundColor:'rgba(252,76,2,.06)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#FC4C02',tension:.35,fill:true},{label:'Objectif 3h30',data:HISTORY.map(()=>3.5),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Objectif'))return' Objectif : 3h30'; const v=ctx.parsed.y,h=Math.floor(v),m=Math.round((v-h)*60); return ` Prédit : ${h}h${String(m).padStart(2,'0')}`}}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>{const h=Math.floor(v),m=Math.round((v-h)*60);return`${h}h${String(m).padStart(2,'0')}`}}}}}});
 
   // CTL/ATL/TSB
   new Chart(document.getElementById('c-ctl'),{type:'line',data:{labels:dayLabels,datasets:[{label:'CTL',data:fitnessData.ctl,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.05)',borderWidth:2,pointRadius:0,tension:.4,fill:true},{label:'ATL',data:fitnessData.atl,borderColor:'#e74c3c',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:.4},{label:'TSB',data:fitnessData.tsb,borderColor:'#27ae60',borderWidth:1.5,borderDash:[4,3],pointRadius:0,tension:.4},{label:'0',data:fitnessData.ctl.map(()=>0),borderColor:'rgba(0,0,0,.1)',borderWidth:.5,pointRadius:0,borderDash:[2,4]}]},options:{...chartOpts,scales:{x:{ticks:{color:'#a0a0a0',font:{size:10},maxRotation:0},grid:{color:'#f5f5f5'}},y:{ticks:{color:'#a0a0a0',font:{size:10},callback:v=>Math.round(v)},grid:{color:'#f5f5f5'}}}}});
@@ -723,8 +697,16 @@ function initCharts(){
   // Volume
   new Chart(document.getElementById('c-vol'),{type:'bar',data:{labels:wkLabels,datasets:[{data:WEEKLY_LOADS,backgroundColor:'rgba(252,76,2,.15)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} km`}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+'km'}}}}});
 
-  // Compliance
-  new Chart(document.getElementById('c-comp'),{type:'bar',data:{labels:wkLabels.slice(-8),datasets:[{label:'Planifié',data:[35,40,40,46,50,50,52,55],backgroundColor:'#e8e8e8',borderColor:'#d0d0d0',borderWidth:1,borderRadius:4},{label:'Réalisé',data:[32,38,35,44,48,48,52,23],backgroundColor:'rgba(252,76,2,.18)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} km`}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+'km'}}}}});
+  // Compliance — toutes les semaines de la prépa
+  const compData = window.COMP_DATA || { labels: wkLabels, planned: WEEKLY_LOADS, done: WEEKLY_LOADS.map(()=>0) };
+  if(window.compChart) window.compChart.destroy();
+  window.compChart = new Chart(document.getElementById('c-comp'),{type:'bar',data:{
+    labels: compData.labels,
+    datasets:[
+      {label:'Planifié',data:compData.planned,backgroundColor:'#e8e8e8',borderColor:'#d0d0d0',borderWidth:1,borderRadius:4},
+      {label:'Réalisé', data:compData.done,   backgroundColor:'rgba(252,76,2,.18)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}
+    ]
+  },options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} km`}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+'km'}}}}});
 
   // Score ring (appelé après)
   updateScoreRing();
@@ -759,6 +741,50 @@ function initCTLDisplay(){
 }
 
 // ═══ PLAN DATA ═══
+// matchSession : compare une session planifiée avec une activité Strava
+// Retourne 'validated' si écart km ET vitesse < 5%, 'done' si réalisée mais hors cible, null sinon
+function matchSession(sess, stravaRuns, weekStartStr){
+  if(!stravaRuns || !stravaRuns.length || !weekStartStr) return null;
+  const wStart = new Date(weekStartStr); wStart.setHours(0,0,0,0);
+  const sessDate = new Date(wStart); sessDate.setDate(wStart.getDate()+(sess.dayOffset||0)); sessDate.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Chercher une activité Strava le même jour (±1 jour de tolérance)
+  const match = stravaRuns.find(a => {
+    const ad = new Date(a.start_date); ad.setHours(0,0,0,0);
+    return Math.abs(ad - sessDate) <= 86400000;
+  });
+
+  if(!match) {
+    // Si la date est passée et pas de match → not done
+    return sessDate < today ? 'missed' : null;
+  }
+
+  const actKm = (match.distance||0)/1000;
+  const planKm = parseFloat(sess.dist||sess.distKm||0);
+  const actSpeedMS = match.distance/(match.moving_time||1);
+  const planPaceStr = sess.target||'';
+  // Extraire allure cible si format "X'XX/km"
+  const paceMatch = planPaceStr.match(/(\d+)'(\d+)/);
+  let validated = false;
+  if(paceMatch && planKm > 0) {
+    const planSecPerKm = parseInt(paceMatch[1])*60+parseInt(paceMatch[2]);
+    const actSecPerKm = 1000/(actSpeedMS||1);
+    const kmOk   = planKm > 0 ? Math.abs(actKm-planKm)/planKm < 0.05 : true;
+    const paceOk = planSecPerKm > 0 ? Math.abs(actSecPerKm-planSecPerKm)/planSecPerKm < 0.05 : true;
+    validated = kmOk && paceOk;
+  } else if(planKm > 0) {
+    const kmOk = Math.abs(actKm-planKm)/planKm < 0.05;
+    validated = kmOk;
+  } else {
+    validated = true; // pas de cible → juste réalisée = validée
+  }
+  return validated ? 'validated' : 'done';
+}
+
+// Store global des activités Strava (rempli par la couche Strava)
+window.STRAVA_RUNS = [];
+
 const STYPES={easy:{l:'Endurance',c:'t-easy'},tempo:{l:'Tempo',c:'t-tempo'},frac:{l:'Fractionné',c:'t-frac'},long:{l:'Sortie longue',c:'t-long'},recup:{l:'Récupération',c:'t-recup'},race:{l:'Course',c:'t-race'}};
 const DAYS_F=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 
@@ -817,6 +843,14 @@ const perfRuns=[
 ];
 
 // ═══ RENDER PLAN ═══
+
+function renderSessStatus(week, sess){
+  const status = matchSession(sess, window.STRAVA_RUNS, week.weekStart);
+  if(status==='validated') return '<span style="font-size:9px;font-weight:700;color:#16a34a;background:#dcfce7;border:1px solid #bbf7d0;padding:2px 6px;border-radius:10px;white-space:nowrap">✓ Validée</span>';
+  if(status==='done')      return '<span style="font-size:9px;font-weight:700;color:#d97706;background:#fff7ed;border:1px solid #fde68a;padding:2px 6px;border-radius:10px;white-space:nowrap">⚠ Réalisée</span>';
+  if(status==='missed')    return '<span style="font-size:9px;font-weight:700;color:#9ca3af;background:#f3f4f6;border:1px solid #e5e7eb;padding:2px 6px;border-radius:10px;white-space:nowrap">✗ Manquée</span>';
+  return '<input type="checkbox" class="chk" onchange="toggleSess('+weeks.indexOf(week)+','+week.sessions.indexOf(sess)+',this.checked)">';
+}
 function renderPlan(){
   const c=document.getElementById('plan-weeks'); c.innerHTML='';
   weeks.forEach((w,wi)=>{
@@ -857,7 +891,7 @@ function renderPlan(){
             <div style="font-size:11px;color:var(--tx2);padding-top:3px">${s.dur} min<br><span style="color:var(--tx3)">🎯 ${s.target}</span></div>
             <div style="font-size:10px;color:var(--tx3);padding-top:3px">🎯 ${s.target}</div>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:center;padding-top:2px">
-              <input type="checkbox" class="chk" ${s.done?'checked':''} onchange="toggleSess(${wi},${si},this.checked)">
+              ${renderSessStatus(w,s)}
               <button class="edit-btn" onclick="openModal()">✎</button>
             </div>
           </div>`;
@@ -978,16 +1012,20 @@ function renderPerfTable(){
 }
 
 // ═══ OBJECTIVE EDIT ═══
-const OBJ={type:'marathon',date:'2027-04-11',start:'2025-12-15',time:'3h30',level:'intermediaire',sessions:'4'};
+const OBJ={type:'marathon',date:'',start:'',time:'',level:'intermediaire',sessions:'4'};
 const OBJ_FIELDS=[
-  {key:'type',label:'Type',type:'select',opts:['marathon:Marathon (42km)','semi:Semi-marathon','10k:10 km']},
+  {key:'type',label:'Type de course',type:'select',opts:['marathon:Marathon (42km)','semi:Semi-marathon','10k:10 km']},
   {key:'date',label:'Date de course',type:'date'},
-  {key:'start',label:'Début prépa',type:'date'},
-  {key:'time',label:'Objectif temps',type:'text',placeholder:'ex: 3h30'},
-  {key:'level',label:'Niveau',type:'select',opts:['debutant:Débutant','intermediaire:Intermédiaire','confirme:Confirmé']},
-  {key:'sessions',label:'Séances/semaine',type:'select',opts:['3:3 séances','4:4 séances','5:5 séances','6:6 séances']},
+  {key:'start',label:'Début de préparation',type:'date'},
+  {key:'time',label:'Objectif de temps',type:'text',placeholder:'ex: 3h30'},
 ];
 let objEditing=false;
+function loadObjFromStorage(){
+  try{
+    const raw=localStorage.getItem('plan_obj');
+    if(raw){ const saved=JSON.parse(raw); Object.assign(OBJ,saved); }
+  }catch(e){}
+}
 function renderObjGrid(){
   document.getElementById('obj-grid').innerHTML=OBJ_FIELDS.map(f=>{
     const val=OBJ[f.key]||'';
@@ -1002,6 +1040,18 @@ function renderObjGrid(){
   }).join('');
 }
 function startObjEdit(){objEditing=true;renderObjGrid();document.getElementById('obj-actions').style.display='flex';document.getElementById('obj-edit-btn').textContent='Annuler';}
+function saveObj(){
+  try{localStorage.setItem('plan_obj',JSON.stringify(OBJ));}catch(e){}
+  if(OBJ.date){ try{ window.RACE_DATE=new Date(OBJ.date+'T08:00:00'); }catch(e){} }
+  updatePlanSummaryDisplay();
+  objEditing=false;renderObjGrid();
+  document.getElementById('obj-actions').style.display='none';
+  document.getElementById('obj-edit-btn').textContent='Modifier';
+  // Recalculer toutes les données avec la nouvelle date de début
+  if(window._stravaActivities && window._stravaActivities.length){
+    injectStravaData(window._stravaActivities);
+  }
+}
 function cancelObjEdit(){objEditing=false;renderObjGrid();document.getElementById('obj-actions').style.display='none';document.getElementById('obj-edit-btn').textContent='Modifier';}
 function toggleObjEdit(){if(objEditing)cancelObjEdit();else startObjEdit();}
 
@@ -1019,6 +1069,24 @@ function closeModal(){document.getElementById('modal').classList.remove('open');
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
 // ═══ INIT ═══
+
+function updatePlanSummaryDisplay(){
+  const titleEl = document.getElementById('plan-summary-title');
+  const subEl   = document.getElementById('plan-summary-sub');
+  if(!titleEl||!subEl) return;
+  const label = window.PLAN_META?.goal?.label || OBJ.type==='marathon'?'Marathon':OBJ.type==='semi'?'Semi-marathon':'10 km';
+  const dateStr = OBJ.date ? new Date(OBJ.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : '—';
+  const nWeeks  = weeks.length || '—';
+  const nSess   = weeks.reduce((s,w)=>s+(w.sessions||[]).length,0) || '—';
+  titleEl.textContent = `${label} — ${dateStr}`;
+  subEl.textContent   = `${nWeeks} semaines · ${nSess} séances · Objectif ${OBJ.time||'—'}`;
+  // Mettre à jour le countdown label
+  const cdLabel = document.querySelector('.cd-event-label');
+  if(cdLabel) cdLabel.textContent = label + ' dans';
+  // Mettre à jour RACE_DATE
+  if(OBJ.date){ try{ window.RACE_DATE = new Date(OBJ.date+'T08:00:00'); }catch(e){} }
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   // Charger FC repos depuis localStorage
   const hrRest=loadHRRest();
@@ -1033,370 +1101,378 @@ window.addEventListener('DOMContentLoaded',()=>{
   updateVO2(hrRest);
 });
 </script>
-</div><!-- /app-content -->
 
 <script>
-// ════════════════════════════════════════════════
-// COUCHE STRAVA — connecte l'app au backend
-// ════════════════════════════════════════════════
-(function() {
-  const API_BASE = '';
-  let stravaActivities = [];
-  let athleteData = null;
+// ════════════════════════════════════════════════════════
+// COUCHE STRAVA — auth + données réelles
+// ════════════════════════════════════════════════════════
+(function(){
 
-  // ─── AUTH CHECK ────────────────────────────
-  async function checkAuth() {
-    const params = new URLSearchParams(location.search);
-    const err = params.get('error');
-    if (err) {
-      history.replaceState({}, '', '/');
-      const msg = {access_denied:'Accès refusé.',token_exchange:'Erreur de connexion.',server_error:'Erreur serveur.'}[err] || 'Erreur inattendue.';
-      const el = document.getElementById('login-error');
-      if(el){ el.textContent = msg; el.style.display = 'block'; }
-    }
+// ─── AUTH ──────────────────────────────────────────────
+async function checkAuth(){
+  const params = new URLSearchParams(location.search);
+  const err = params.get('error');
+  if(err){
+    history.replaceState({},'','/');
+    const el=document.getElementById('login-error');
+    if(el){el.textContent={access_denied:'Accès refusé.',token_exchange:'Erreur de connexion.',server_error:'Erreur serveur.'}[err]||'Erreur.';el.style.display='block';}
+  }
+  let me;
+  try{ const r=await fetch('/api/me'); me=await r.json(); }
+  catch(e){ showLogin(); return false; }
+  if(!me||!me.authenticated){ showLogin(); return false; }
+  setHeaderAthlete(me.athlete);
+  showApp();
+  return true;
+}
 
-    let me;
-    try {
-      const res = await fetch('/api/me');
-      me = await res.json();
-    } catch(e) {
-      console.error('Auth check failed:', e);
-      showLogin(); return false;
-    }
+function showLogin(){
+  document.getElementById('app-loader').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app-content').style.display='none';
+}
+function showApp(){
+  document.getElementById('app-loader').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-content').style.display='block';
+}
+function setHeaderAthlete(a){
+  if(!a)return;
+  const nameEl=document.querySelector('.hdr-name');
+  if(nameEl) nameEl.textContent=`${a.firstname||''} ${a.lastname||''}`.trim();
+  const avEl=document.querySelector('.av');
+  if(avEl&&a.profile) avEl.innerHTML=`<img src="${a.profile}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+}
 
-    if(!me || !me.authenticated) { showLogin(); return false; }
+// ─── STRAVA API ────────────────────────────────────────
+async function stravaApi(path,params={}){
+  const url=new URL('/api/strava',location.origin);
+  url.searchParams.set('path',path);
+  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
+  const r=await fetch(url);
+  if(r.status===401){location.href='/';throw new Error('Session expirée');}
+  return r.json();
+}
 
-    athleteData = me.athlete;
-    showApp();
-    setHeaderAthlete(me.athlete);
-    return true;
+async function loadAllActivities(){
+  let page=1,all=[];
+  while(true){
+    const b=await stravaApi('/athlete/activities',{per_page:100,page});
+    if(!Array.isArray(b)||!b.length)break;
+    all=all.concat(b);
+    if(b.length<100||page>=10)break;
+    page++;
+  }
+  return all;
+}
+
+// ─── CALCULS DEPUIS STRAVA ─────────────────────────────
+function getStartDate(){
+  // Priorité : OBJ.start (début prépa explicite) > OBJ.date (date course) > fallback
+  const raw=OBJ.start||'';
+  if(raw){const d=new Date(raw);if(!isNaN(d))return d;}
+  // Fallback : 6 mois avant aujourd'hui
+  const d=new Date();d.setMonth(d.getMonth()-6);return d;
+}
+
+function weekKey(dateStr){
+  const d=new Date(dateStr);
+  d.setHours(0,0,0,0);
+  const day=d.getDay();
+  const diff=d.getDate()-(day===0?6:day-1);
+  const mon=new Date(d);mon.setDate(diff);
+  return mon.toISOString().slice(0,10);
+}
+
+function fmtWeekLabel(isoMonday){
+  const d=new Date(isoMonday);
+  return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+}
+
+function fmtDur(sec){
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  return h>0?`${h}h${String(m).padStart(2,'0')}`:`${m} min`;
+}
+function fmtPace(sec,m){
+  if(!m||!sec)return'—';
+  const spk=(sec/m)*1000;
+  return`${Math.floor(spk/60)}'${String(Math.round(spk%60)).padStart(2,'0')}/km`;
+}
+function escH(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+
+function injectStravaData(activities){
+  const startDate=getStartDate();
+  const runs=activities.filter(a=>{
+    const d=new Date(a.start_date);
+    return d>=startDate&&(a.type==='Run'||a.type==='VirtualRun');
+  }).sort((a,b)=>new Date(a.start_date)-new Date(b.start_date));
+
+  // Stocker pour matchSession
+  window.STRAVA_RUNS=runs;
+
+  // ── Stats globales ──────────────────────────────────
+  const totKm=runs.reduce((s,a)=>s+(a.distance||0),0)/1000;
+  const totSec=runs.reduce((s,a)=>s+(a.moving_time||0),0);
+  const totElev=runs.reduce((s,a)=>s+(a.total_elevation_gain||0),0);
+  const hrRuns=runs.filter(a=>a.average_heartrate>0);
+  const avgHr=hrRuns.length?hrRuns.reduce((s,a)=>s+a.average_heartrate,0)/hrRuns.length:0;
+
+  const statsRow=document.querySelector('#tab-perf .stats-row');
+  if(statsRow) statsRow.innerHTML=`
+    <div class="sc"><div class="sl">Sorties</div><div class="sv">${runs.length}</div><div class="ss">depuis début prépa</div></div>
+    <div class="sc"><div class="sl">Distance</div><div class="sv">${Math.round(totKm)}<span class="su">km</span></div></div>
+    <div class="sc"><div class="sl">Temps total</div><div class="sv" style="font-size:20px">${fmtDur(totSec)}</div></div>
+    <div class="sc"><div class="sl">Dénivelé +</div><div class="sv">${Math.round(totElev)}<span class="su" style="font-size:11px">m</span></div></div>
+    <div class="sc"><div class="sl">FC moy.</div><div class="sv">${avgHr?Math.round(avgHr)+'<span class="su">bpm</span>':'—'}</div></div>`;
+
+  // ── Table activités ─────────────────────────────────
+  const tbody=document.getElementById('perf-tbody');
+  if(tbody){
+    const rows=[...runs].reverse().slice(0,50).map(a=>`<tr>
+      <td class="td-m">${new Date(a.start_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</td>
+      <td style="font-weight:500">${escH(a.name)}</td>
+      <td><span class="tdbadge">${a.sport_type||a.type}</span></td>
+      <td style="font-size:14px;font-weight:700">${(a.distance/1000).toFixed(1)}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
+      <td class="td-m">${fmtDur(a.moving_time)}</td>
+      <td class="td-m">${fmtPace(a.moving_time,a.distance)}</td>
+      <td class="td-m">${a.average_heartrate?Math.round(a.average_heartrate)+' bpm':'—'}</td>
+      <td class="td-m">${a.total_elevation_gain?Math.round(a.total_elevation_gain)+' m':'—'}</td>
+    </tr>`).join('');
+    tbody.innerHTML=rows||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx3)">Aucune course depuis le début de la préparation.</td></tr>';
   }
 
-  function showLogin() {
-    document.getElementById('app-loader').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('app-content').style.display = 'none';
-  }
+  // ── Agrégation par semaine ──────────────────────────
+  const byWeek={};
+  runs.forEach(a=>{
+    const wk=weekKey(a.start_date);
+    if(!byWeek[wk])byWeek[wk]={km:0,sec:0,paceSum:0,n:0,hrSum:0,hrN:0};
+    byWeek[wk].km+=(a.distance||0)/1000;
+    byWeek[wk].sec+=(a.moving_time||0);
+    if(a.distance&&a.moving_time){byWeek[wk].paceSum+=(a.moving_time/a.distance)*1000;byWeek[wk].n++;}
+    if(a.average_heartrate){byWeek[wk].hrSum+=a.average_heartrate;byWeek[wk].hrN++;}
+  });
 
-  function showApp() {
-    document.getElementById('app-loader').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app-content').style.display = 'block';
-  }
+  const sortedWeeks=Object.keys(byWeek).sort();
+  const wkLabels=sortedWeeks.map(fmtWeekLabel);
+  const wkKm=sortedWeeks.map(w=>+byWeek[w].km.toFixed(1));
+  const wkPace=sortedWeeks.map(w=>byWeek[w].n?+(byWeek[w].paceSum/byWeek[w].n).toFixed(0):360);
 
-  function setHeaderAthlete(a) {
-    if(!a) return;
-    // Modifier le nom et l'avatar dans le header
-    const nameEls = document.querySelectorAll('.hdr-name');
-    nameEls.forEach(el => {
-      el.textContent = `${a.firstname||''} ${a.lastname||''}`.trim() || 'Athlète';
+  // ── HISTORY pour prédictions ────────────────────────
+  HISTORY.length=0;
+  sortedWeeks.slice(-12).forEach((wk,i)=>{
+    HISTORY.push({
+      week:`S${i+1}`,
+      weekDate:fmtWeekLabel(wk),
+      km:+byWeek[wk].km.toFixed(1),
+      pace:+(byWeek[wk].n?(byWeek[wk].paceSum/byWeek[wk].n):360).toFixed(0)
     });
-    // Avatar : remplacer le contenu du div.av
-    const avs = document.querySelectorAll('.av');
-    avs.forEach(av => {
-      if(a.profile) {
-        av.innerHTML = `<img src="${a.profile}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
-      } else if(a.firstname) {
-        av.textContent = a.firstname[0].toUpperCase();
-      }
+  });
+
+  // ── WEEKLY_LOADS pour CTL/ATL ───────────────────────
+  WEEKLY_LOADS.length=0;
+  wkKm.forEach(k=>WEEKLY_LOADS.push(k));
+  window.WEEKLY_LABELS=wkLabels;
+
+  // ── Compliance : toutes semaines du plan ────────────
+  // Construire depuis weeks[] du plan
+  if(typeof weeks!=='undefined'&&weeks.length){
+    const planLabels=[],planKm=[],doneKm=[];
+    weeks.forEach(w=>{
+      if(!w.weekStart)return;
+      const lbl=fmtWeekLabel(w.weekStart);
+      planLabels.push(lbl);
+      planKm.push(w.km||w.kmTarget||0);
+      // Km réalisés cette semaine dans Strava
+      const wkStr=weekKey(w.weekStart);
+      doneKm.push(byWeek[wkStr]?+byWeek[wkStr].km.toFixed(1):0);
     });
-  }
-
-  // ─── STRAVA API ────────────────────────────
-  async function stravaApi(path, params={}) {
-    const url = new URL('/api/strava', location.origin);
-    url.searchParams.set('path', path);
-    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
-    const res = await fetch(url);
-    if(res.status === 401) { location.href = '/'; throw new Error('Session expirée'); }
-    return res.json();
-  }
-
-  async function loadActivities() {
-    let page = 1, all = [];
-    while(true) {
-      const b = await stravaApi('/athlete/activities', {per_page:100, page});
-      if(!Array.isArray(b) || !b.length) break;
-      all = all.concat(b);
-      if(b.length < 100 || page >= 10) break;
-      page++;
-    }
-    stravaActivities = all;
-    return all;
-  }
-
-  // ─── INTÉGRATION DANS L'APP ───────────────
-  // Remplacer les données fictives par les vraies données Strava
-  function injectStravaData() {
-    // Mettre à jour les stats globales (perf-stats)
-    const startDate = new Date(); startDate.setMonth(startDate.getMonth() - 6);
-    const runs = stravaActivities.filter(a => {
-      const d = new Date(a.start_date);
-      return d >= startDate && (a.type==='Run' || a.type==='VirtualRun');
-    });
-
-    if(runs.length === 0) return;
-
-    const totKm   = runs.reduce((s,a)=>s+(a.distance||0),0)/1000;
-    const totSec  = runs.reduce((s,a)=>s+(a.moving_time||0),0);
-    const totElev = runs.reduce((s,a)=>s+(a.total_elevation_gain||0),0);
-    const hrRuns  = runs.filter(a=>a.average_heartrate>0);
-    const avgHr   = hrRuns.length ? hrRuns.reduce((s,a)=>s+a.average_heartrate,0)/hrRuns.length : 0;
-
-    // Mettre à jour les sc dans #perf-stats
-    const statsRow = document.querySelector('#tab-perf .stats-row');
-    if(statsRow) {
-      statsRow.innerHTML = `
-        <div class="sc"><div class="sl">Sorties</div><div class="sv">${runs.length}</div><div class="ss">6 derniers mois</div></div>
-        <div class="sc"><div class="sl">Distance</div><div class="sv">${Math.round(totKm)}<span class="su">km</span></div></div>
-        <div class="sc"><div class="sl">Temps total</div><div class="sv" style="font-size:20px">${fmtDur(totSec)}</div></div>
-        <div class="sc"><div class="sl">Dénivelé +</div><div class="sv">${Math.round(totElev)}<span class="su" style="font-size:11px">m</span></div></div>
-        <div class="sc"><div class="sl">FC moy.</div><div class="sv">${avgHr?Math.round(avgHr)+'<span class="su">bpm</span>':'—'}</div></div>`;
-    }
-
-    // Mettre à jour la table d'activités
-    const tbody = document.getElementById('perf-tbody');
-    if(tbody) {
-      const rows = runs.slice(0, 50).map(a => {
-        const d = new Date(a.start_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
-        const dist = (a.distance/1000).toFixed(1);
-        const du = fmtDur(a.moving_time);
-        const pa = fmtPaceFromSec(a.moving_time, a.distance);
-        const hr = a.average_heartrate ? Math.round(a.average_heartrate)+' bpm' : '—';
-        const el = a.total_elevation_gain ? Math.round(a.total_elevation_gain)+' m' : '—';
-        return `<tr>
-          <td class="td-m">${d}</td>
-          <td style="font-weight:500">${escHtml(a.name)}</td>
-          <td><span class="tdbadge">${a.sport_type||a.type}</span></td>
-          <td style="font-size:14px;font-weight:700">${dist}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
-          <td class="td-m">${du}</td>
-          <td class="td-m">${pa}</td>
-          <td class="td-m">${hr}</td>
-          <td class="td-m">${el}</td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx3)">Aucune course Strava sur les 6 derniers mois.</td></tr>';
-    }
-  }
-
-  function fmtDur(sec) {
-    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
-    return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
-  }
-  function fmtPaceFromSec(sec, m) {
-    if(!m||!sec) return '—';
-    const spk = (sec/m)*1000;
-    return `${Math.floor(spk/60)}'${String(Math.round(spk%60)).padStart(2,'0')}/km`;
-  }
-  function escHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  // ─── IMPORT/EXPORT PLAN ─────────────────
-  function triggerImport() {
-    let inp = document.getElementById('import-json-hidden');
-    if(!inp) {
-      inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = '.json'; inp.id = 'import-json-hidden';
-      inp.style.display = 'none';
-      inp.onchange = handleImport;
-      document.body.appendChild(inp);
-    }
-    inp.value = ''; inp.click();
-  }
-
-  function handleImport(e) {
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if(!data.weeks || !Array.isArray(data.weeks) || !data.weeks.length) {
-          alert('Fichier invalide : pas de semaines.'); return;
-        }
-        if(!data.goal) { alert('Fichier invalide : objectif manquant.'); return; }
-
-        // Stocker dans localStorage
-        try { localStorage.setItem('imported_plan', JSON.stringify(data)); } catch(e) {}
-
-        // Mettre à jour l'app : remplacer les weeks et goal globaux
-        if(typeof weeks !== 'undefined' && Array.isArray(weeks)) {
-          weeks.length = 0;
-          data.weeks.forEach(w => weeks.push({
-            num: w.num,
-            dates: formatDateRange(w.weekStart),
-            phase: w.phaseLabel || w.phase,
-            status: 'future',
-            km: w.kmTarget,
-            sessions: (w.sessions||[]).map(s => ({
-              day: dayLabelFromOffset(w.weekStart, s.dayOffset),
-              dayOffset: s.dayOffset || 0,
-              type: mapTypeToCode(s.type),
-              name: s.name,
-              dist: String(s.distKm || ''),
-              dur: s.durationMin || 0,
-              target: s.targetPace || '—',
-              desc: s.description || '',
-              watch: s.watch || '',
-              done: s.completed || false,
-            }))
-          }));
-          // Marquer les semaines passées/courantes
-          markWeekStatus();
-          if(typeof renderPlan === 'function') renderPlan();
-          if(typeof renderUpcoming === 'function') renderUpcoming();
-        }
-
-        const nW = data.weeks.length;
-        const nS = data.weeks.reduce((s,w)=>s+(w.sessions||[]).length, 0);
-        alert(`✅ Plan importé !\n${data.goal.label||'Marathon'}\n${data.goal.dateStr||''} · Objectif ${data.goal.time||''}\n${nW} semaines · ${nS} séances`);
-
-      } catch(err) {
-        alert('Erreur lecture JSON : ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  function exportPlan() {
-    if(typeof weeks === 'undefined' || !weeks.length) { alert('Aucun plan à exporter.'); return; }
-    const data = { goal: {label:'Plan exporté'}, weeks };
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'plan_export.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  function formatDateRange(weekStartStr) {
-    if(!weekStartStr) return '';
-    const start = new Date(weekStartStr);
-    const end = new Date(start); end.setDate(start.getDate()+6);
-    const opts = {day:'2-digit', month:'short'};
-    return `${start.toLocaleDateString('fr-FR',opts)} – ${end.toLocaleDateString('fr-FR',opts)}`;
-  }
-
-  function dayLabelFromOffset(weekStartStr, offset) {
-    const start = new Date(weekStartStr || Date.now());
-    const d = new Date(start); d.setDate(start.getDate() + (offset||0));
-    const days = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-    return `${days[d.getDay()]} ${d.getDate()}`;
-  }
-
-  function mapTypeToCode(t) {
-    const map = {easy:'easy', tempo:'tempo', frac:'frac', long:'long', recup:'recup', race:'race'};
-    return map[t] || 'easy';
-  }
-
-  function markWeekStatus() {
-    if(typeof weeks === 'undefined') return;
-    const today = new Date(); today.setHours(0,0,0,0);
-    weeks.forEach((w, i) => {
-      const ws = w.sessions[0]?.dayOffset !== undefined ? null : null;
-      // Trouver weekStart à partir du JSON original (passé via dates ou recalcul)
-      // Simplification : utiliser num pour status
-      // Status sera ré-évalué en fonction de la date courante
-    });
-    // Marquer la semaine en cours = celle qui contient aujourd'hui
-    // On trouve via les dates string si possible — laissé simple pour l'instant
-  }
-
-  // Remplacer la date de course depuis le JSON importé
-  function updateRaceFromImport(data) {
-    if(data.goal && data.goal.dateStr) {
-      try {
-        window.RACE_DATE = new Date(data.goal.dateStr + 'T08:00:00');
-        // Mettre à jour le label dans le bandeau
-        const span = document.querySelector('.cd-event-label');
-        if(span && data.goal.label) {
-          span.textContent = data.goal.label + ' dans';
-        }
-      } catch(e) {}
-    }
-  }
-
-  // Charger le plan depuis localStorage au boot
-  function loadStoredPlan() {
-    try {
-      const raw = localStorage.getItem('imported_plan');
-      if(raw) {
-        const data = JSON.parse(raw);
-        // Simuler un import silencieux
-        const fakeEvent = { target: { files: [{ name:'stored.json' }] } };
-        // Plus simple : appliquer directement
-        if(data.weeks && typeof weeks !== 'undefined') {
-          weeks.length = 0;
-          data.weeks.forEach(w => weeks.push({
-            num: w.num,
-            dates: formatDateRange(w.weekStart),
-            phase: w.phaseLabel || w.phase,
-            status: 'future',
-            km: w.kmTarget,
-            sessions: (w.sessions||[]).map(s => ({
-              day: dayLabelFromOffset(w.weekStart, s.dayOffset),
-              dayOffset: s.dayOffset || 0,
-              type: mapTypeToCode(s.type),
-              name: s.name,
-              dist: String(s.distKm || ''),
-              dur: s.durationMin || 0,
-              target: s.targetPace || '—',
-              desc: s.description || '',
-              watch: s.watch || '',
-              done: s.completed || false,
-            }))
-          }));
-          updateRaceFromImport(data);
-          if(typeof renderPlan === 'function') renderPlan();
-          if(typeof renderUpcoming === 'function') renderUpcoming();
-        }
-      }
-    } catch(e) { console.warn('Stored plan load failed:', e); }
-  }
-
-  // Exposer en global
-  window.triggerImport = triggerImport;
-  window.exportPlan = exportPlan;
-
-  // Ajouter boutons import/export dans la page (zone plan d'entraînement)
-  function addImportButtons() {
-    const target = document.querySelector('.plan-summary');
-    if(!target) return;
-    if(document.getElementById('btn-import-json')) return;
-
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto';
-    wrap.innerHTML = `
-      <button id="btn-import-json" class="btn btn-secondary btn-sm" onclick="triggerImport()">📥 Importer JSON</button>
-      <button id="btn-export-json" class="btn btn-secondary btn-sm" onclick="exportPlan()">📤 Exporter</button>
-    `;
-    target.appendChild(wrap);
-  }
-
-  // ─── BOOT ──────────────────────────────────
-  async function bootStrava() {
-    const ok = await checkAuth();
-    if(!ok) return;
-
-    addImportButtons();
-    loadStoredPlan();
-
-    // Charger Strava en arrière-plan
-    try {
-      await loadActivities();
-      injectStravaData();
-    } catch(e) {
-      console.warn('Strava load failed:', e);
-    }
-  }
-
-  // Démarrer après que l'app initiale soit prête
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(bootStrava, 100));
+    window.COMP_DATA={labels:planLabels,planned:planKm,done:doneKm};
   } else {
-    setTimeout(bootStrava, 100);
+    // Fallback : semaines Strava
+    window.COMP_DATA={labels:wkLabels,planned:wkKm.map(k=>k*1.1),done:wkKm};
   }
+
+  // ── VO2Max depuis meilleures séances ───────────────
+  // Méthode Uth-Sørensen avec FC repos si dispo
+  const hrRest=parseInt(localStorage.getItem('hrRest')||'60');
+  if(typeof updateVO2==='function') updateVO2(hrRest);
+
+  // ── Re-render tout ─────────────────────────────────
+  if(typeof initCharts==='function') initCharts();
+  if(typeof renderPlan==='function') renderPlan();
+  if(typeof renderUpcoming==='function') renderUpcoming();
+  if(typeof updateScoreRing==='function') updateScoreRing();
+  if(typeof initPredDisplay==='function') initPredDisplay();
+  if(typeof initCTLDisplay==='function') initCTLDisplay();
+}
+
+// ─── IMPORT JSON ───────────────────────────────────────
+window.triggerImport=function(){
+  let inp=document.getElementById('__import_inp');
+  if(!inp){
+    inp=document.createElement('input');inp.type='file';inp.accept='.json';
+    inp.id='__import_inp';inp.style.display='none';
+    inp.onchange=handleImport;
+    document.body.appendChild(inp);
+  }
+  inp.value='';inp.click();
+};
+
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.weeks||!data.weeks.length){alert('Fichier invalide.');return;}
+      if(!data.goal){alert('Champ "goal" manquant.');return;}
+      localStorage.setItem('imported_plan',JSON.stringify(data));
+      applyImportedPlan(data);
+      const nW=data.weeks.length,nS=data.weeks.reduce((s,w)=>s+(w.sessions||[]).length,0);
+      alert(`✅ Plan importé !\n${data.goal.label||''}\n${data.goal.dateStr||''} · ${data.goal.time||''}\n${nW} semaines · ${nS} séances`);
+    }catch(err){alert('Erreur JSON : '+err.message);}
+  };
+  reader.readAsText(file);
+}
+
+function applyImportedPlan(data){
+  window.PLAN_META=data;
+  // Mettre à jour OBJ depuis goal
+  const g=data.goal||{};
+  if(g.type)OBJ.type=g.type;
+  if(g.dateStr)OBJ.date=g.dateStr;
+  if(g.startStr)OBJ.start=g.startStr;
+  else if(data.weeks&&data.weeks[0])OBJ.start=data.weeks[0].weekStart;
+  if(g.time)OBJ.time=g.time;
+  localStorage.setItem('plan_obj',JSON.stringify(OBJ));
+
+  // Injecter les semaines dans weeks[]
+  if(typeof weeks!=='undefined'){
+    weeks.length=0;
+    data.weeks.forEach(w=>{
+      const today=new Date();today.setHours(0,0,0,0);
+      const wStart=w.weekStart?new Date(w.weekStart):null;
+      const wEnd=wStart?new Date(wStart.getTime()+6*86400000):null;
+      let status='future';
+      if(wEnd&&wEnd<today)status='done';
+      else if(wStart&&wStart<=today&&today<=wEnd)status='current';
+
+      weeks.push({
+        num:w.num,
+        weekStart:w.weekStart,
+        dates:w.weekStart?fmtWeekRange(w.weekStart):'',
+        phase:w.phaseLabel||w.phase||'',
+        status:status,
+        km:w.kmTarget||0,
+        sessions:(w.sessions||[]).map(s=>({
+          day:dayLabel(w.weekStart,s.dayOffset),
+          dayOffset:s.dayOffset||0,
+          type:s.type||'easy',
+          name:s.name||'',
+          dist:String(s.distKm||''),
+          dur:s.durationMin||0,
+          target:s.targetPace||'—',
+          desc:s.description||'',
+          watch:s.watch||'',
+          done:s.completed||false,
+        }))
+      });
+    });
+  }
+
+  // Mettre à jour RACE_DATE
+  if(g.dateStr){
+    try{window.RACE_DATE=new Date(g.dateStr+'T08:00:00');}catch(e){}
+  }
+  if(typeof updatePlanSummaryDisplay==='function')updatePlanSummaryDisplay();
+  if(typeof renderPlan==='function')renderPlan();
+  if(typeof renderUpcoming==='function')renderUpcoming();
+  if(typeof updateScoreRing==='function')updateScoreRing();
+}
+
+function fmtWeekRange(isoStr){
+  const d=new Date(isoStr);const e=new Date(d);e.setDate(d.getDate()+6);
+  const o={day:'2-digit',month:'short'};
+  return `${d.toLocaleDateString('fr-FR',o)} – ${e.toLocaleDateString('fr-FR',o)}`;
+}
+function dayLabel(weekStartStr,offset){
+  const DAYS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  if(!weekStartStr)return DAYS[offset||0];
+  const d=new Date(weekStartStr);d.setDate(d.getDate()+(offset||0));
+  return `${DAYS[(d.getDay()+6)%7]} ${d.getDate()}`;
+}
+
+window.exportCurrentPlan=function(){
+  if(typeof weeks==='undefined'||!weeks.length){alert('Aucun plan chargé.');return;}
+  const data=window.PLAN_META||{goal:OBJ,weeks};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download=`plan_${OBJ.date||'export'}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// ─── BOOT ──────────────────────────────────────────────
+async function boot(){
+  // Charger OBJ depuis localStorage
+  if(typeof loadObjFromStorage==='function')loadObjFromStorage();
+
+  const ok=await checkAuth();
+  if(!ok)return;
+
+  // Charger plan importé depuis localStorage
+  try{
+    const raw=localStorage.getItem('imported_plan');
+    if(raw)applyImportedPlan(JSON.parse(raw));
+    else if(typeof updatePlanSummaryDisplay==='function')updatePlanSummaryDisplay();
+  }catch(e){}
+
+  // Charger activités Strava
+  try{
+    const activities=await loadAllActivities();
+    window._stravaActivities=activities; // stocker pour recalcul si date change
+    injectStravaData(activities);
+  }catch(e){console.warn('Strava load error:',e);}
+}
+
+// Login screen
+const loginHtml=`
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:998;align-items:center;justify-content:center;padding:24px;overflow:hidden">
+  <div style="position:absolute;font-family:Inter,sans-serif;font-weight:800;font-size:28vw;color:rgba(0,0,0,.03);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;letter-spacing:-.04em">TRAIN</div>
+  <div style="position:relative;z-index:1;width:100%;max-width:400px;background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+      <div style="width:36px;height:36px;background:var(--or);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+      </div>
+      <span style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--or)">Training Dashboard</span>
+    </div>
+    <h1 style="font-size:40px;font-weight:800;line-height:1;margin-bottom:10px;color:var(--tx)">Prépare ton<br><span style="color:var(--or)">objectif.</span></h1>
+    <p style="color:var(--tx2);font-size:13px;line-height:1.7;margin-bottom:32px">Plan d'entraînement adaptatif, suivi Strava en temps réel, prédiction de performance.</p>
+    <div id="login-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:12px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
+    <a href="/api/login" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--or);color:#fff;font-size:14px;font-weight:700;padding:16px 24px;text-decoration:none;border-radius:8px;box-shadow:0 2px 8px rgba(252,76,2,.3)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+      Se connecter avec Strava
+    </a>
+  </div>
+</div>
+<div id="app-loader" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:997;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="font-family:Inter,sans-serif;font-size:48px;font-weight:800;color:var(--or)">TRAIN</div>
+  <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3)">Chargement...</div>
+</div>`;
+
+// Injecter au début du body
+document.body.insertAdjacentHTML('afterbegin', loginHtml);
+
+// Démarrer
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,200));
+}else{
+  setTimeout(boot,200);
+}
+
 })();
 </script>
+
 </body>
 </html>

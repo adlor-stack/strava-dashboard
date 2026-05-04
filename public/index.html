@@ -527,7 +527,7 @@ tbody td{padding:10px 12px;font-size:12px}
 
   <!-- RÉALISÉ VS PLANIFIÉ -->
   <div class="card">
-    <div class="card-title">Réalisé vs planifié — 8 dernières semaines</div>
+    <div class="card-title">Réalisé vs planifié — toute la préparation</div>
     <div class="chart-h"><canvas id="c-comp"></canvas></div>
   </div>
 </div>
@@ -596,7 +596,7 @@ function cameron(t1,d1,d2){ return t1*(d2/cameronA(d2))/(d1/cameronA(d1)); }
 function vv(refs){ const v10=refs['10k']?(10000/(refs['10k'].timeMin*60)):null; const vs=refs.semi?(21097/(refs.semi.timeMin*60)):null; if(v10&&vs)return(MARATHON_KM*1000)/(0.54*v10+0.46*vs)/60; if(vs)return(MARATHON_KM*1000)/(vs*0.955)/60; return null; }
 function tanda(avgPaceSec,avgKm){ return Math.exp(4.63746+0.002449*avgPaceSec-0.002784*avgKm); }
 
-const HISTORY = [{week:'S3',km:32,pace:378},{week:'S4',km:38,pace:372},{week:'S5',km:35,pace:366},{week:'S6',km:44,pace:360},{week:'S7',km:48,pace:354},{week:'S8',km:48,pace:348},{week:'S9',km:52,pace:342},{week:'S10',km:46,pace:336}];
+const HISTORY = []; // rempli par injectStravaData depuis les vraies activités Strava
 
 function computeConsensus(){
   const r1=riegel(REFS.semi.timeMin,21.1,MARATHON_KM);
@@ -654,7 +654,7 @@ function updateVO2(hrRest){
 }
 
 // ═══ CTL/ATL/TSB ═══
-const WEEKLY_LOADS = [30,45,55,40,65,70,60,75,80,55,70,80,85,60,72,60];
+const WEEKLY_LOADS = []; // rempli par injectStravaData depuis les vraies activités Strava
 function simulateCTL(loads){
   let ctl=0,atl=0; const ca=[],aa=[],ta=[];
   loads.forEach(wl=>{ const d=wl/7; for(let i=0;i<7;i++){ ctl=K_CTL*ctl+(1-K_CTL)*d; atl=K_ATL*atl+(1-K_ATL)*d; ca.push(+ctl.toFixed(1)); aa.push(+atl.toFixed(1)); ta.push(+(ctl-atl).toFixed(1)); } });
@@ -723,6 +723,15 @@ function renderDashProgress() {
   setW('prog-assiduite', pctSess);
 }
 function updateScoreRing(){
+  if(!window.STRAVA_RUNS || !WEEKLY_LOADS.length) {
+    // Pas encore de données — afficher des valeurs neutres
+    const scoreEl = document.getElementById('score-num');
+    if(scoreEl) { scoreEl.textContent='—'; scoreEl.style.color='var(--tx3)'; }
+    ['ind-assiduite','ind-vo2','ind-diff','ind-tsb'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.textContent='—';
+    });
+    return;
+  }
   const hrRest=loadHRRest();
   const vo2=computeVO2(hrRest);
   const vScore=vo2Score(vo2);
@@ -760,6 +769,35 @@ function updateScoreRing(){
 // ═══ CHARTS ═══
 const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e8e8e8',borderWidth:1,titleColor:'#6b6b6b',bodyColor:'#1a1a1a'}},scales:{x:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}},y:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}}}};
 
+
+function refreshCompChart() {
+  const ctx = document.getElementById('c-comp');
+  if(!ctx) return;
+  const _compData = window.COMP_DATA;
+  if(!_compData || !_compData.labels || !_compData.labels.length) {
+    ctx.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3);font-size:12px">Importe un plan pour voir le comparatif.</div>';
+    return;
+  }
+  if(window.compChart) { window.compChart.destroy(); window.compChart = null; }
+  window.compChart = new Chart(ctx, {type:'bar', data:{
+    labels: _compData.labels,
+    datasets:[
+      {label:'Planifié', data:_compData.planned, backgroundColor:'#e8e8e8', borderColor:'#d0d0d0', borderWidth:1, borderRadius:4},
+      {label:'Réalisé',  data:_compData.done,    backgroundColor:'rgba(252,76,2,.18)', borderColor:'#FC4C02', borderWidth:2, borderRadius:4}
+    ]
+  }, options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:true, position:'top', labels:{color:'#6b6b6b', font:{size:10}, padding:10, boxWidth:8}},
+      tooltip:{backgroundColor:'#fff', borderColor:'#e8e8e8', borderWidth:1, titleColor:'#6b6b6b', bodyColor:'#1a1a1a',
+        callbacks:{label:c=>` ${c.parsed.y} km`}}
+    },
+    scales:{
+      x:{ticks:{color:'#a0a0a0', font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:16}, grid:{color:'#f0f0f0'}},
+      y:{ticks:{color:'#a0a0a0', font:{size:10}, callback:v=>v+'km'}, grid:{color:'#f0f0f0'}}
+    }
+  }});
+}
 function initCharts(){
   // Recalculer CTL/ATL/TSB depuis les données courantes
   fitnessData = simulateCTL(WEEKLY_LOADS);
@@ -827,6 +865,7 @@ function initPredDisplay(){
 
 // ═══ CTL DISPLAY ═══
 function initCTLDisplay(){
+  if(!WEEKLY_LOADS.length){["ctl-val","atl-val","tsb-val"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="—";});return;}
   document.getElementById('ctl-val').textContent=Math.round(lastCTL);
   document.getElementById('atl-val').textContent=Math.round(lastATL);
   const tsbEl=document.getElementById('tsb-val');
@@ -887,14 +926,7 @@ const upcoming=[
   {today:false,day:'Dim',num:9,month:'mar',type:'long',name:'Sortie longue 28 km',dist:'28 km',dur:'3h03',notes:'La sortie clé de toute la prépa !'},
 ];
 
-const perfRuns=[
-  {date:'24 fév',name:'Endurance Z2 matin',type:'Run',dist:'11.2',dur:'1h07',pace:"5'59",hr:'138',elev:'45'},
-  {date:'22 fév',name:'Fractionné 1000m',type:'Run',dist:'12.1',dur:'55min',pace:"4'33",hr:'168',elev:'32'},
-  {date:'20 fév',name:'Tempo allure semi',type:'Run',dist:'14.0',dur:'1h14',pace:"5'17",hr:'162',elev:'55'},
-  {date:'17 fév',name:'Sortie longue 24km',type:'Run',dist:'24.1',dur:'2h36',pace:"6'28",hr:'152',elev:'210'},
-  {date:'14 fév',name:'Endurance fondamentale',type:'Run',dist:'10.8',dur:'1h05',pace:"6'01",hr:'140',elev:'38'},
-  {date:'12 fév',name:'Côtes 200m',type:'Run',dist:'9.5',dur:'50min',pace:"5'16",hr:'172',elev:'280'},
-];
+const perfRuns=[]; // remplacé par les données Strava réelles
 
 // ═══ RENDER PLAN ═══
 
@@ -902,9 +934,8 @@ function renderSessActions(w, s, wi, si) {
   const st = matchSession(s, w.weekStart);
   const badge = st ? sessBadge(st) : null;
   const editBtn = `<button class="edit-btn" onclick="openModal(${wi},${si})" style="margin-top:4px">✎</button>`;
-  if(badge) return badge + '<br>' + editBtn;
-  const chk = `<input type="checkbox" class="chk" ${s.done?'checked':''} onchange="toggleSess(${wi},${si},this.checked)">`;
-  return chk + editBtn;
+  // Pas de validation manuelle — uniquement via Strava
+  return (badge || '') + '<br>' + editBtn;
 }
 function renderPlan(){
   const c=document.getElementById('plan-weeks'); c.innerHTML='';
@@ -1029,7 +1060,7 @@ function renderWeekBlock(containerId, weekIdx) {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${badge ? badge : '<button class="btn btn-primary btn-sm" onclick="toggleSess('+weekIdx+','+si+',true);renderUpcoming();renderPlan();" style="padding:3px 8px;font-size:9px">✓</button>'}
+        ${badge || ''}
         <button class="edit-btn" onclick="openModal(${weekIdx},${si})" style="padding:3px 6px;font-size:9px">✎</button>
       </div>
     </div>`;
@@ -1064,12 +1095,13 @@ function renderUpcoming() {
 
 // ═══ PERF TABLE ═══
 function renderPerfTable(){
-  document.getElementById('perf-tbody').innerHTML=perfRuns.map(r=>`
-    <tr><td class="td-m">${r.date}</td><td style="font-weight:500">${r.name}</td>
-    <td><span class="tdbadge">${r.type}</span></td>
-    <td style="font-size:14px;font-weight:700">${r.dist}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
-    <td class="td-m">${r.dur}</td><td class="td-m">${r.pace}/km</td>
-    <td class="td-m">${r.hr} bpm</td><td class="td-m">${r.elev} m</td></tr>`).join('');
+  // Utilise les données Strava réelles (injectées par injectStravaData)
+  // La table est mise à jour directement dans injectStravaData — cette fonction est un stub
+  if(!window.STRAVA_RUNS || !window.STRAVA_RUNS.length) {
+    const tbody = document.getElementById('perf-tbody');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx3)">Connecte-toi à Strava et importe un plan pour voir tes activités.</td></tr>';
+  }
+  // Les données sont injectées directement dans le tbody par injectStravaData()
 }
 
 // ═══ OBJECTIVE EDIT ═══
@@ -1716,6 +1748,7 @@ function injectStravaData(activities) {
   }).sort(function(a,b){return new Date(a.start_date)-new Date(b.start_date);});
 
   window.STRAVA_RUNS = runs;
+  window._weekMonday = weekMonday;  // exposer pour buildCompData
 
   // Stats
   var totKm=runs.reduce(function(s,a){return s+(a.distance||0);},0)/1000;
@@ -1780,23 +1813,11 @@ function injectStravaData(activities) {
   sortedWks.forEach(function(wk){ WEEKLY_LOADS.push(+byWeek[wk].km.toFixed(1)); });
   window.WEEKLY_LABELS = sortedWks.map(fmtWeekLabel);
 
-  // Compliance : toutes les semaines du plan (passées et futures)
-  // Pour les semaines futures, done=0 ; pour les passées, done=km Strava de la semaine
-  if(typeof weeks!=='undefined' && weeks.length) {
-    var planLabels=[], planKm=[], doneKm=[];
-    var todayMs = new Date().setHours(0,0,0,0);
-    weeks.forEach(function(w){
-      if(!w.weekStart) return;
-      var wStart = new Date(w.weekStart).setHours(0,0,0,0);
-      planLabels.push(fmtWeekLabel(w.weekStart));
-      planKm.push(w.km||0);
-      // Km réalisés = Strava seulement si la semaine est passée ou en cours
-      var wkStr = weekMonday(w.weekStart);
-      var realized = (wStart <= todayMs && byWeek[wkStr]) ? +byWeek[wkStr].km.toFixed(1) : 0;
-      doneKm.push(realized);
-    });
-    window.COMP_DATA = {labels:planLabels, planned:planKm, done:doneKm};
-  }
+  // Stocker byWeek pour buildCompData
+  window._byWeek = byWeek;
+  // Construire COMP_DATA depuis le plan + données Strava
+  if(typeof buildCompData==='function') buildCompData();
+  if(typeof refreshCompChart==='function') refreshCompChart();
 
   // Rerendre
   if(typeof initCharts==='function') initCharts();
@@ -1849,6 +1870,34 @@ function dayLbl(wkStart, offset) {
   return DAYS[(d.getDay()+6)%7]+' '+d.getDate();
 }
 
+
+function buildCompData() {
+  if(typeof weeks === 'undefined' || !weeks.length) return;
+  var todayMs = new Date().setHours(0,0,0,0);
+  var byWeek  = window._byWeek || {};  // km Strava par semaine (peuplé par injectStravaData)
+  var planLabels=[], planKm=[], doneKm=[];
+  weeks.forEach(function(w){
+    if(!w.weekStart) return;
+    var lbl = new Date(w.weekStart).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+    planLabels.push(lbl);
+    planKm.push(w.km||0);
+    var wStart = new Date(w.weekStart).setHours(0,0,0,0);
+    // Km réalisés uniquement pour les semaines passées ou en cours
+    var wkStr = weekMonday(w.weekStart);
+    var realized = (wStart <= todayMs && byWeek[wkStr]) ? +byWeek[wkStr].km.toFixed(1) : 0;
+    doneKm.push(realized);
+  });
+  window.COMP_DATA = {labels:planLabels, planned:planKm, done:doneKm};
+}
+
+function weekMonday(dateStr) {
+  if(window._weekMonday) return window._weekMonday(dateStr);
+  var d = new Date(dateStr); d.setHours(0,0,0,0);
+  var day = d.getDay();
+  var diff = day===0 ? -6 : 1-day;
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
 function applyPlan(data) {
   window.PLAN_META = data;
   var g = data.goal||{};

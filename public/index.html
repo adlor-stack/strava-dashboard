@@ -747,9 +747,12 @@ function renderDashProgress() {
   const todayMs = new Date().setHours(0,0,0,0);
   weeks.forEach(function(w) {
     (w.sessions||[]).forEach(function(s) {
-      const ws = w.weekStart ? parseLocalDate(w.weekStart) : null;
-      if(!ws) return;
-      const sd = new Date(ws); sd.setDate(ws.getDate()+(s.dayOffset||0)); sd.setHours(0,0,0,0);
+      if(!w.weekStart) return;
+      var _p = w.weekStart.split('-');
+      const ws = new Date(+_p[0], +_p[1]-1, +_p[2]);
+      if(!ws || isNaN(ws)) return;
+      const sd = new Date(+_p[0], +_p[1]-1, +_p[2] + (s.dayOffset||0));
+      sd.setHours(0,0,0,0);
       if(sd.getTime() > todayMs) return; // future
       totalSess++;
       const st = matchSession(s, w.weekStart);
@@ -789,9 +792,12 @@ function updateScoreRing(){
   if(typeof weeks !== 'undefined') {
     weeks.forEach(function(w) {
       (w.sessions||[]).forEach(function(s) {
-        const ws = w.weekStart ? parseLocalDate(w.weekStart) : null;
-        if(!ws) return;
-        const sd = new Date(ws); sd.setDate(ws.getDate()+(s.dayOffset||0)); sd.setHours(0,0,0,0);
+                if(!w.weekStart) return;
+        var _pp = w.weekStart.split('-');
+        const ws2 = new Date(+_pp[0], +_pp[1]-1, +_pp[2]);
+        if(!ws2 || isNaN(ws2)) return;
+        const sd = new Date(+_pp[0], +_pp[1]-1, +_pp[2] + (s.dayOffset||0));
+        sd.setHours(0,0,0,0);
         if(sd > today_a) return; // séance future → pas comptée
         totalSess++;
         const st = matchSession(s, w.weekStart);

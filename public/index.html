@@ -451,8 +451,8 @@ tbody td{padding:10px 12px;font-size:12px}
               <div class="prog-bar" style="width:120px"><div class="prog-fill" id="prog-assiduite" style="background:var(--or)"></div></div>
             </div>
             <div style="text-align:right">
-              <div class="ind-val" id="ind-assiduite">82%</div>
-              <div class="ind-sub">23 / 28 séances</div>
+              <div class="ind-val" id="ind-assiduite">—%</div>
+              <div class="ind-sub" id="ind-assiduite-sub">— / — séances</div>
             </div>
           </div>
           <!-- 2. Score VO2max -->
@@ -493,12 +493,12 @@ tbody td{padding:10px 12px;font-size:12px}
     <div class="card">
       <div class="card-title">Avancement de la prépa</div>
       <div style="margin-bottom:13px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--tx2)">Séances réalisées</span><span style="font-weight:700">23 / 28</span></div>
-        <div class="prog-bar"><div class="prog-fill" style="width:82%;background:var(--or)"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--tx2)">Séances réalisées</span><span style="font-weight:700" id="dash-done-sess">— / —</span></div>
+        <div class="prog-bar"><div class="prog-fill" id="prog-sess" style="width:0%;background:var(--or)"></div></div>
       </div>
       <div style="margin-bottom:13px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--tx2)">Kilomètres accumulés</span><span style="font-weight:700">312 / 380 km</span></div>
-        <div class="prog-bar"><div class="prog-fill" style="width:82%;background:var(--bl)"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--tx2)">Kilomètres accumulés</span><span style="font-weight:700" id="dash-done-km">— / — km</span></div>
+        <div class="prog-bar"><div class="prog-fill" id="prog-km" style="width:0%;background:var(--bl)"></div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
         <div style="text-align:center;padding:12px;background:var(--or-l);border:1px solid var(--or-m);border-radius:8px">
@@ -547,7 +547,7 @@ tbody td{padding:10px 12px;font-size:12px}
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-      <button class="btn btn-primary" onclick="closeModal()">Enregistrer</button>
+      <button class="btn btn-primary" onclick="saveModal()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -660,10 +660,10 @@ function simulateCTL(loads){
   loads.forEach(wl=>{ const d=wl/7; for(let i=0;i<7;i++){ ctl=K_CTL*ctl+(1-K_CTL)*d; atl=K_ATL*atl+(1-K_ATL)*d; ca.push(+ctl.toFixed(1)); aa.push(+atl.toFixed(1)); ta.push(+(ctl-atl).toFixed(1)); } });
   return {ctl:ca,atl:aa,tsb:ta};
 }
-const fitnessData = simulateCTL(WEEKLY_LOADS);
-const lastCTL = fitnessData.ctl[fitnessData.ctl.length-1];
-const lastATL = fitnessData.atl[fitnessData.atl.length-1];
-const lastTSB = fitnessData.tsb[fitnessData.tsb.length-1];
+var fitnessData = simulateCTL(WEEKLY_LOADS);
+var lastCTL = fitnessData.ctl[fitnessData.ctl.length-1];
+var lastATL = fitnessData.atl[fitnessData.atl.length-1];
+var lastTSB = fitnessData.tsb[fitnessData.tsb.length-1];
 
 const var_gr='#27ae60';
 function tsbStatus(tsb){
@@ -679,11 +679,48 @@ function tsbScore(tsb){ return Math.min(100,Math.max(0,Math.round(50+(tsb*2))));
 
 // ═══ SCORE RING ═══
 let scoreChart;
+
+function renderDashProgress() {
+  if(typeof weeks === 'undefined' || !weeks.length) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = OBJ.date ? new Date(OBJ.date+'T00:00:00') : null;
+  const daysLeft = raceDate ? Math.max(0, Math.ceil((raceDate-today)/86400000)) : null;
+
+  // Sessions
+  const totalSess = weeks.reduce((s,w)=>s+(w.sessions||[]).length, 0);
+  const doneSess  = weeks.reduce((s,w)=>s+(w.sessions||[]).filter(se=>se.done).length, 0);
+  const pctSess   = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
+
+  // Km planifiés vs réalisés
+  const totalKm = weeks.reduce((s,w)=>s+(w.km||0), 0);
+  // Km réalisés = depuis STRAVA_RUNS sur la période
+  const stravaKm = (window.STRAVA_RUNS||[]).reduce((s,a)=>s+(a.distance||0)/1000, 0);
+  const pctKm    = totalKm > 0 ? Math.min(100, Math.round(stravaKm/totalKm*100)) : 0;
+
+  // Mettre à jour HTML
+  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const setW = (id, v) => { const el=document.getElementById(id); if(el) el.style.width=v+'%'; };
+
+  set('dash-done-sess', doneSess+' / '+totalSess);
+  setW('prog-sess', pctSess);
+  set('dash-done-km', Math.round(stravaKm)+' / '+Math.round(totalKm)+' km');
+  setW('prog-km', pctKm);
+  if(document.getElementById('days-left')) document.getElementById('days-left').textContent = daysLeft !== null ? daysLeft : '—';
+
+  // Indicateur de forme — assiduité
+  set('ind-assiduite', pctSess+'%');
+  set('ind-assiduite-sub', doneSess+' / '+totalSess+' séances');
+  const progAssid = document.getElementById('prog-assiduite');
+  if(progAssid) progAssid.style.width = pctSess+'%';
+}
 function updateScoreRing(){
   const hrRest=loadHRRest();
   const vo2=computeVO2(hrRest);
   const vScore=vo2Score(vo2);
-  const assiduite=82;
+  // Assiduité depuis le plan réel
+  const totalSess = (typeof weeks!=='undefined') ? weeks.reduce((s,w)=>s+(w.sessions||[]).length,0) : 0;
+  const doneSess  = (typeof weeks!=='undefined') ? weeks.reduce((s,w)=>s+(w.sessions||[]).filter(se=>se.done).length,0) : 0;
+  const assiduite = totalSess > 0 ? Math.round((doneSess/totalSess)*100) : 0;
   const consensus=computeConsensus();
   const diff=consensus-TARGET_MIN;
   const diffScore=Math.max(0,Math.min(100,100-Math.round(diff/TARGET_MIN*200)));
@@ -697,6 +734,7 @@ function updateScoreRing(){
   const ctx=document.getElementById('c-score');
   scoreChart=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[globalScore,100-globalScore],backgroundColor:[scoreColor,'#f0f0f0'],borderWidth:0,cutout:'80%'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{enabled:false}}}});
   document.getElementById('prog-assiduite').style.width=assiduite+'%';
+  renderDashProgress();
   const tsbCol=tsb>5?var_gr:tsb>-15?'#d97706':'#e74c3c';
   document.getElementById('ind-tsb').textContent=(tsb>0?'+':'')+Math.round(tsb);
   document.getElementById('ind-tsb').style.color=tsbCol;
@@ -714,15 +752,39 @@ function updateScoreRing(){
 const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e8e8e8',borderWidth:1,titleColor:'#6b6b6b',bodyColor:'#1a1a1a'}},scales:{x:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}},y:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}}}};
 
 function initCharts(){
+  // Recalculer CTL/ATL/TSB depuis les données courantes
+  fitnessData = simulateCTL(WEEKLY_LOADS);
+  lastCTL = fitnessData.ctl[fitnessData.ctl.length-1];
+  lastATL = fitnessData.atl[fitnessData.atl.length-1];
+  lastTSB = fitnessData.tsb[fitnessData.tsb.length-1];
+  // Mettre à jour les cards CTL/ATL/TSB
+  if(typeof initCTLDisplay==='function') initCTLDisplay();
   const wkLabels=window.WEEKLY_LABELS||WEEKLY_LOADS.map((_,i)=>`S${i+1}`);
   const dayLabels=[]; for(let i=0;i<WEEKLY_LOADS.length*7;i++) dayLabels.push(i%7===0?`S${Math.floor(i/7)+1}`:'');
 
   // VO2max hebdo (simulé)
-  const vo2Weekly=HISTORY.map((_,i)=>46+i*0.9);
+  // VO2max estimée par semaine depuis les meilleures séances (vitesse max sur 10min+)
+  const hrRest_v = loadHRRest ? loadHRRest() : 60;
+  const vo2Base = computeVO2 ? computeVO2(hrRest_v) : 45;
+  const vo2Weekly = HISTORY.map((w,i)=>{
+    // Estimer VO2max depuis l'allure moyenne : formule Daniels simplifiée
+    // VO2 = 0.8 + 0.1894 * e^(-0.01278*t) + 0.2989 * e^(-0.1932*t) → v/VO2 = allure
+    // Simplification : VO2max ≈ (vitesse m/min * 0.2 + 3.5) * 1.8 si on a la vitesse
+    const paceSecPerKm = w.pace || 360;
+    const speedMperMin = 1000 / paceSecPerKm * 60;
+    const vo2est = Math.min(75, Math.max(30, speedMperMin * 0.225 + 3.5));
+    return +vo2est.toFixed(1);
+  });
   new Chart(document.getElementById('c-vo2'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'VO2max',data:vo2Weekly,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',tension:.4,fill:true},{label:'Objectif',data:HISTORY.map(()=>55),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+' ml'}}}}});
 
-  // Prédiction hebdo
-  const predWeekly=HISTORY.map((_,i)=>Math.round(248-i*1.8));
+  // Prédiction hebdo — calculée depuis les données réelles semaine par semaine
+  const predWeekly = HISTORY.map((w, i) => {
+    const slice = HISTORY.slice(0, i+1);
+    if(!slice.length) return null;
+    const avgPace = slice.reduce((s,wk)=>s+wk.pace*wk.km,0) / Math.max(1, slice.reduce((s,wk)=>s+wk.km,0));
+    const avgKm   = slice.reduce((s,wk)=>s+wk.km,0) / slice.length;
+    return Math.round(tanda(avgPace, avgKm));
+  });
   new Chart(document.getElementById('c-pred'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'Prédit',data:predWeekly.map(v=>+(v/60).toFixed(3)),borderColor:'#FC4C02',backgroundColor:'rgba(252,76,2,.06)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#FC4C02',tension:.35,fill:true},{label:'Objectif 3h30',data:HISTORY.map(()=>3.5),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Objectif'))return' Objectif : 3h30'; const v=ctx.parsed.y,h=Math.floor(v),m=Math.round((v-h)*60); return ` Prédit : ${h}h${String(m).padStart(2,'0')}`}}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>{const h=Math.floor(v),m=Math.round((v-h)*60);return`${h}h${String(m).padStart(2,'0')}`}}}}}});
 
   // CTL/ATL/TSB
@@ -826,6 +888,15 @@ const perfRuns=[
 ];
 
 // ═══ RENDER PLAN ═══
+
+function renderSessActions(w, s, wi, si) {
+  const st = matchSession(s, w.weekStart);
+  const badge = st ? sessBadge(st) : null;
+  const editBtn = `<button class="edit-btn" onclick="openModal(${wi},${si})" style="margin-top:4px">✎</button>`;
+  if(badge) return badge + '<br>' + editBtn;
+  const chk = `<input type="checkbox" class="chk" ${s.done?'checked':''} onchange="toggleSess(${wi},${si},this.checked)">`;
+  return chk + editBtn;
+}
 function renderPlan(){
   const c=document.getElementById('plan-weeks'); c.innerHTML='';
   weeks.forEach((w,wi)=>{
@@ -866,8 +937,7 @@ function renderPlan(){
             <div style="font-size:11px;color:var(--tx2);padding-top:3px">${s.dur} min<br><span style="color:var(--tx3)">🎯 ${s.target}</span></div>
             <div style="font-size:10px;color:var(--tx3);padding-top:3px">🎯 ${s.target}</div>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:center;padding-top:2px">
-              <input type="checkbox" class="chk" ${s.done?'checked':''} onchange="toggleSess(${wi},${si},this.checked)">
-              <button class="edit-btn" onclick="openModal()">✎</button>
+              ${renderSessActions(w,s,wi,si)}
             </div>
           </div>`;
         }).join('')}
@@ -958,7 +1028,7 @@ function renderWeekBlock(containerId, offsetWeeks) {
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="edit-btn" onclick="openModal()" style="padding:3px 6px;font-size:9px">✎</button>
+          <button class="edit-btn" onclick="openModal(${planIdx},${si})" style="padding:3px 6px;font-size:9px">✎</button>
           <button class="btn ${s.done ? 'btn-secondary' : 'btn-primary'} btn-sm" 
             onclick="toggleSess(${planIdx},${si},${!s.done});renderUpcoming();" 
             style="padding:3px 8px;font-size:9px;min-width:28px">${s.done ? '↩' : '✓'}</button>
@@ -1021,8 +1091,51 @@ function showTab(id,btn){
 }
 
 // ═══ MODAL ═══
-function openModal(){document.getElementById('modal').classList.add('open');}
+function openModal(wi, si) {
+  // Charger les données de la séance dans le modal
+  if(wi !== undefined && si !== undefined) {
+    const w = weeks[wi], s = w && w.sessions[si];
+    if(s) {
+      const setV = (id, v) => { const el = document.getElementById(id); if(el && v !== undefined) el.value = v; };
+      const setT = (id, v) => { const el = document.getElementById(id); if(el && v !== undefined) el.textContent = v; };
+      setV('m-name',  s.name);
+      setV('m-day',   s.day ? s.day.split(' ')[0] : '');
+      setV('m-type',  s.type);
+      // Durée et distance
+      const durEl = document.querySelector('.modal .fg .field input[type="number"]');
+      if(durEl) durEl.value = s.dur || '';
+      const distEl = document.querySelectorAll('.modal .fg .field input[type="number"]')[1];
+      if(distEl) distEl.value = s.dist || '';
+      // Description et watch
+      const textareas = document.querySelectorAll('.modal .fg .field textarea');
+      if(textareas[0]) textareas[0].value = s.desc || '';
+      if(textareas[1]) textareas[1].value = s.watch || '';
+      // Stocker wi/si pour la sauvegarde
+      document.getElementById('modal').dataset.wi = wi;
+      document.getElementById('modal').dataset.si = si;
+    }
+  }
+  document.getElementById('modal').classList.add('open');
+}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveModal(){
+  const modal = document.getElementById('modal');
+  const wi = parseInt(modal.dataset.wi);
+  const si = parseInt(modal.dataset.si);
+  if(!isNaN(wi) && !isNaN(si) && weeks[wi] && weeks[wi].sessions[si]) {
+    const s = weeks[wi].sessions[si];
+    const nameEl = document.getElementById('m-name');
+    if(nameEl) s.name = nameEl.value;
+    const typeEl = document.getElementById('m-type');
+    if(typeEl) s.type = typeEl.value;
+    const textareas = document.querySelectorAll('.modal .fg .field textarea');
+    if(textareas[0]) s.desc  = textareas[0].value;
+    if(textareas[1]) s.watch = textareas[1].value;
+    renderPlan();
+    renderUpcoming();
+  }
+  closeModal();
+}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
 // ═══ INIT ═══
@@ -1662,6 +1775,7 @@ function injectStravaData(activities) {
   if(typeof initPredDisplay==='function') initPredDisplay();
   if(typeof initCTLDisplay==='function') initCTLDisplay();
   if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+  if(typeof renderDashProgress==='function') renderDashProgress();
 }
 
 // Import plan
@@ -1741,6 +1855,7 @@ function applyPlan(data) {
   });
 
   if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+  if(typeof renderDashProgress==='function') renderDashProgress();
   if(typeof renderPlan==='function') renderPlan();
   if(typeof renderUpcoming==='function') renderUpcoming();
   if(window.__allActivities) injectStravaData(window.__allActivities);
@@ -1768,6 +1883,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var raw=localStorage.getItem('imported_plan');
       if(raw) applyPlan(JSON.parse(raw));
       else if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+  if(typeof renderDashProgress==='function') renderDashProgress();
     } catch(e) {}
     // Charger Strava
     try {

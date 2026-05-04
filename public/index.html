@@ -506,7 +506,7 @@ tbody td{padding:10px 12px;font-size:12px}
           <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">jours restants</div>
         </div>
         <div style="text-align:center;padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:8px">
-          <div style="font-size:26px;font-weight:800;color:var(--tx)">7</div>
+          <div style="font-size:26px;font-weight:800;color:var(--tx)" id="weeks-left">—</div>
           <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">semaines</div>
         </div>
       </div>
@@ -683,35 +683,44 @@ let scoreChart;
 function renderDashProgress() {
   if(typeof weeks === 'undefined' || !weeks.length) return;
   const today = new Date(); today.setHours(0,0,0,0);
-  const raceDate = OBJ.date ? new Date(OBJ.date+'T00:00:00') : null;
-  const daysLeft = raceDate ? Math.max(0, Math.ceil((raceDate-today)/86400000)) : null;
-
-  // Sessions
-  const totalSess = weeks.reduce((s,w)=>s+(w.sessions||[]).length, 0);
-  const doneSess  = weeks.reduce((s,w)=>s+(w.sessions||[]).filter(se=>se.done).length, 0);
+  
+  // Date de début et de fin depuis le plan
+  const startDate = OBJ.start ? new Date(OBJ.start+'T00:00:00') : (weeks[0]?.weekStart ? new Date(weeks[0].weekStart) : null);
+  const raceDate  = OBJ.date  ? new Date(OBJ.date+'T00:00:00')  : null;
+  
+  // Jours et semaines restantes
+  const daysLeft  = raceDate  ? Math.max(0, Math.ceil((raceDate-today)/86400000))  : null;
+  const weeksLeft = daysLeft !== null ? Math.ceil(daysLeft/7) : null;
+  
+  // Sessions : toutes les sessions du plan, celles réalisées (via matchSession)
+  const allSessions = [];
+  weeks.forEach((w,wi) => (w.sessions||[]).forEach((s,si) => {
+    const status = matchSession(s, w.weekStart);
+    allSessions.push({ s, wi, si, status });
+  }));
+  const totalSess = allSessions.length;
+  const doneSess  = allSessions.filter(x => x.status==='validated'||x.status==='done'||x.s.done).length;
   const pctSess   = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
-
-  // Km planifiés vs réalisés
+  
+  // Km : planifiés (total plan) vs réalisés (Strava depuis début prépa)
   const totalKm = weeks.reduce((s,w)=>s+(w.km||0), 0);
-  // Km réalisés = depuis STRAVA_RUNS sur la période
   const stravaKm = (window.STRAVA_RUNS||[]).reduce((s,a)=>s+(a.distance||0)/1000, 0);
-  const pctKm    = totalKm > 0 ? Math.min(100, Math.round(stravaKm/totalKm*100)) : 0;
+  const pctKm   = totalKm > 0 ? Math.min(100, Math.round(stravaKm/totalKm*100)) : 0;
 
-  // Mettre à jour HTML
-  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  const setW = (id, v) => { const el=document.getElementById(id); if(el) el.style.width=v+'%'; };
-
+  const set  = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=String(v); };
+  const setW = (id,v) => { const el=document.getElementById(id); if(el) el.style.width=v+'%'; };
+  
   set('dash-done-sess', doneSess+' / '+totalSess);
   setW('prog-sess', pctSess);
   set('dash-done-km', Math.round(stravaKm)+' / '+Math.round(totalKm)+' km');
   setW('prog-km', pctKm);
-  if(document.getElementById('days-left')) document.getElementById('days-left').textContent = daysLeft !== null ? daysLeft : '—';
+  if(document.getElementById('days-left'))  set('days-left',  daysLeft  !== null ? daysLeft  : '—');
+  if(document.getElementById('weeks-left')) set('weeks-left', weeksLeft !== null ? weeksLeft : '—');
 
   // Indicateur de forme — assiduité
   set('ind-assiduite', pctSess+'%');
   set('ind-assiduite-sub', doneSess+' / '+totalSess+' séances');
-  const progAssid = document.getElementById('prog-assiduite');
-  if(progAssid) progAssid.style.width = pctSess+'%';
+  setW('prog-assiduite', pctSess);
 }
 function updateScoreRing(){
   const hrRest=loadHRRest();
@@ -760,7 +769,7 @@ function initCharts(){
   // Mettre à jour les cards CTL/ATL/TSB
   if(typeof initCTLDisplay==='function') initCTLDisplay();
   const wkLabels=window.WEEKLY_LABELS||WEEKLY_LOADS.map((_,i)=>`S${i+1}`);
-  const dayLabels=[]; for(let i=0;i<WEEKLY_LOADS.length*7;i++) dayLabels.push(i%7===0?`S${Math.floor(i/7)+1}`:'');
+  const dayLabels=window.CTL_LABELS||[]; if(!dayLabels.length){for(let i=0;i<WEEKLY_LOADS.length*7;i++) dayLabels.push(i%7===0?window.WEEKLY_LABELS?.[Math.floor(i/7)]||`S${Math.floor(i/7)+1}`:'');}
 
   // VO2max hebdo (simulé)
   // VO2max estimée par semaine depuis les meilleures séances (vitesse max sur 10min+)
@@ -960,91 +969,98 @@ function getMonday(offsetWeeks) {
 }
 
 function fmtDateRange(monday) {
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
   const opts = { day: '2-digit', month: 'short' };
   return monday.toLocaleDateString('fr-FR', opts) + ' — ' + sunday.toLocaleDateString('fr-FR', opts);
 }
 
-function renderWeekBlock(containerId, offsetWeeks) {
-  const monday = getMonday(offsetWeeks);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-  const MONTHS_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'août', 'sep', 'oct', 'nov', 'déc'];
-
-  // Récupérer les sessions du plan correspondant à cette semaine
-  // offsetWeeks 0 = semaine courante = weeks[2] (index 2, status current)
-  // offsetWeeks 1 = semaine suivante = weeks[3] (index 3, status future)
-  const planIdx = offsetWeeks + 2;
-  const week = weeks[planIdx];
-
-  const weekLabel = offsetWeeks === 0 ? 'Cette semaine' : 'Semaine suivante';
-  const headerColor = offsetWeeks === 0 ? 'var(--or)' : 'var(--tx2)';
-  const headerBg = offsetWeeks === 0 ? 'var(--or-l)' : 'var(--bg)';
-  const headerBorder = offsetWeeks === 0 ? 'var(--or-m)' : 'var(--bd)';
+function renderWeekBlock(containerId, weekIdx) {
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  const week = weeks[weekIdx];
+  if(!week) {
+    container.innerHTML = '<div style="border:1px solid var(--bd);border-radius:10px;padding:20px;text-align:center;font-size:12px;color:var(--tx3)">Aucune séance planifiée</div>';
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wStart = week.weekStart ? new Date(week.weekStart) : getMonday(weekIdx === currentWeekIdx() ? 0 : 1);
+  wStart.setHours(0,0,0,0);
+  const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+6);
+  const isCurrentWeek = today >= wStart && today <= wEnd;
+  const DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  const MONTHS_FR  = ['jan','fév','mar','avr','mai','jun','jul','août','sep','oct','nov','déc'];
 
   let html = `<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;box-shadow:var(--sh)">
-    <div style="background:${headerBg};border-bottom:1px solid ${headerBorder};padding:12px 16px">
-      <div style="font-size:10px;font-weight:700;color:${headerColor};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${weekLabel}</div>
-      <div style="font-size:12px;color:var(--tx2)">${fmtDateRange(monday)}</div>
+    <div style="background:${isCurrentWeek?'var(--or-l)':'var(--bg)'};border-bottom:1px solid ${isCurrentWeek?'var(--or-m)':'var(--bd)'};padding:12px 16px">
+      <div style="font-size:10px;font-weight:700;color:${isCurrentWeek?'var(--or)':'var(--tx2)'};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${isCurrentWeek?'Cette semaine':'Semaine suivante'} — S${week.num}</div>
+      <div style="font-size:12px;color:var(--tx2)">${week.dates||fmtDateRange(wStart)}</div>
     </div>
     <div>`;
 
-  if (!week) {
-    html += `<div style="padding:20px 16px;text-align:center;font-size:12px;color:var(--tx3)">Aucune séance planifiée</div>`;
-  } else {
-    // dayOffset: 0=Lun, 1=Mar, 2=Mer, 3=Jeu, 4=Ven, 5=Sam, 6=Dim
-    week.sessions.forEach((s, si) => {
-      const sessDate = new Date(monday);
-      sessDate.setDate(monday.getDate() + (s.dayOffset || 0));
-      sessDate.setHours(0, 0, 0, 0);
-
-      const isToday = sessDate.getTime() === today.getTime();
-      const isPast = sessDate < today && !isToday;
-      const tp = STYPES[s.type] || STYPES.easy;
-      const dayName = DAYS_SHORT[sessDate.getDay()];
-      const dayNum = sessDate.getDate();
-      const monthStr = MONTHS_FR[sessDate.getMonth()];
-
-      const rowBg = isToday ? '#fff8f0' : s.done ? '#f0fdf5' : 'transparent';
-      const leftBorder = isToday ? 'border-left:3px solid var(--or);' : '';
-      const opacity = isPast && !s.done ? 'opacity:.5;' : '';
-
-      html += `<div style="display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f5f5f5;background:${rowBg};${leftBorder}${opacity}">
-        <div style="text-align:center;flex-shrink:0">
-          <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:${isToday ? 'var(--or)' : 'var(--tx3)'};">${dayName}</div>
-          <div style="font-size:22px;font-weight:800;line-height:1.1;color:${isToday ? 'var(--or)' : 'var(--tx)'};">${dayNum}</div>
-          <div style="font-size:9px;color:var(--tx3);">${monthStr}</div>
+  week.sessions.forEach((s, si) => {
+    const sessDate = new Date(wStart);
+    sessDate.setDate(wStart.getDate() + (s.dayOffset||0));
+    sessDate.setHours(0,0,0,0);
+    const isToday = sessDate.getTime() === today.getTime();
+    const isPast  = sessDate < today && !isToday;
+    const tp = STYPES[s.type] || STYPES.easy;
+    const dayName = DAYS_SHORT[sessDate.getDay()];
+    const dayNum  = sessDate.getDate();
+    const monthStr= MONTHS_FR[sessDate.getMonth()];
+    const status  = matchSession(s, week.weekStart);
+    const badge   = status ? sessBadge(status) : null;
+    const rowBg   = isToday ? '#fff8f0' : (status==='validated' ? '#f0fdf5' : (status==='done' ? '#fffbeb' : 'transparent'));
+    const leftBdr = isToday ? 'border-left:3px solid var(--or);' : '';
+    const opacity = isPast && !status ? 'opacity:.5;' : '';
+    html += `<div style="display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f5f5f5;background:${rowBg};${leftBdr}${opacity}">
+      <div style="text-align:center;flex-shrink:0">
+        <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:${isToday?'var(--or)':'var(--tx3)'};">${dayName}</div>
+        <div style="font-size:22px;font-weight:800;line-height:1.1;color:${isToday?'var(--or)':'var(--tx)'};">${dayNum}</div>
+        <div style="font-size:9px;color:var(--tx3);">${monthStr}</div>
+      </div>
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:500;margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          <span class="stype ${tp.c}" style="font-size:8px">${tp.l}</span>
+          <span>${s.name}</span>
+          ${isToday?'<span style="font-size:8px;font-weight:700;color:var(--or);background:var(--or-l);padding:1px 5px;border-radius:6px">Auj.</span>':''}
         </div>
-        <div style="min-width:0">
-          <div style="font-size:12px;font-weight:500;margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <span class="stype ${tp.c}" style="font-size:8px">${tp.l}</span>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
-            ${isToday ? '<span style="font-size:8px;font-weight:700;color:var(--or);background:var(--or-l);padding:1px 5px;border-radius:6px">Auj.</span>' : ''}
-            ${s.done ? '<span style="font-size:10px;color:var(--gr)">✓</span>' : ''}
-          </div>
-          <div style="font-size:10px;color:var(--tx3)">
-            ${s.dist ? '📏 ' + s.dist + ' km' : ''} ${s.dur ? '· ⏱ ' + s.dur + ' min' : ''} ${s.target ? '· 🎯 ' + s.target : ''}
-          </div>
+        <div style="font-size:10px;color:var(--tx3)">
+          ${s.dist?'📏 '+s.dist+' km':''} ${s.dur?'· ⏱ '+s.dur+' min':''} ${s.target?'· 🎯 '+s.target:''}
         </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="edit-btn" onclick="openModal(${planIdx},${si})" style="padding:3px 6px;font-size:9px">✎</button>
-          <button class="btn ${s.done ? 'btn-secondary' : 'btn-primary'} btn-sm" 
-            onclick="toggleSess(${planIdx},${si},${!s.done});renderUpcoming();" 
-            style="padding:3px 8px;font-size:9px;min-width:28px">${s.done ? '↩' : '✓'}</button>
-        </div>
-      </div>`;
-    });
-  }
-
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        ${badge ? badge : '<button class="btn btn-primary btn-sm" onclick="toggleSess('+weekIdx+','+si+',true);renderUpcoming();renderPlan();" style="padding:3px 8px;font-size:9px">✓</button>'}
+        <button class="edit-btn" onclick="openModal(${weekIdx},${si})" style="padding:3px 6px;font-size:9px">✎</button>
+      </div>
+    </div>`;
+  });
   html += `</div></div>`;
-  document.getElementById(containerId).innerHTML = html;
+  container.innerHTML = html;
+}
+
+function currentWeekIdx() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i=0; i<weeks.length; i++) {
+    if(!weeks[i].weekStart) continue;
+    const ws = new Date(weeks[i].weekStart); ws.setHours(0,0,0,0);
+    const we = new Date(ws); we.setDate(ws.getDate()+6);
+    if(today >= ws && today <= we) return i;
+  }
+  // Chercher la prochaine semaine future
+  for(let i=0; i<weeks.length; i++) {
+    if(!weeks[i].weekStart) continue;
+    const ws = new Date(weeks[i].weekStart); ws.setHours(0,0,0,0);
+    if(ws > today) return i;
+  }
+  return 0;
 }
 
 function renderUpcoming() {
-  renderWeekBlock('week-block-1', 0);
-  renderWeekBlock('week-block-2', 1);
+  const ci = currentWeekIdx();
+  renderWeekBlock('week-block-1', ci);
+  renderWeekBlock('week-block-2', ci+1 < weeks.length ? ci+1 : ci);
 }
+
 
 // ═══ PERF TABLE ═══
 function renderPerfTable(){
@@ -1124,13 +1140,17 @@ function saveModal(){
   const si = parseInt(modal.dataset.si);
   if(!isNaN(wi) && !isNaN(si) && weeks[wi] && weeks[wi].sessions[si]) {
     const s = weeks[wi].sessions[si];
-    const nameEl = document.getElementById('m-name');
-    if(nameEl) s.name = nameEl.value;
-    const typeEl = document.getElementById('m-type');
-    if(typeEl) s.type = typeEl.value;
-    const textareas = document.querySelectorAll('.modal .fg .field textarea');
-    if(textareas[0]) s.desc  = textareas[0].value;
-    if(textareas[1]) s.watch = textareas[1].value;
+    const get = id => { const el=document.getElementById(id); return el?el.value:null; };
+    const tas = document.querySelectorAll('.modal .fg .field textarea');
+    if(get('m-name'))  s.name  = get('m-name');
+    if(get('m-type'))  s.type  = get('m-type');
+    // Durée et distance
+    const numInputs = document.querySelectorAll('.modal .fg .field input[type="number"]');
+    if(numInputs[0] && numInputs[0].value) s.dur  = parseInt(numInputs[0].value);
+    if(numInputs[1] && numInputs[1].value) s.dist = numInputs[1].value;
+    if(tas[0]) s.desc  = tas[0].value;
+    if(tas[1]) s.watch = tas[1].value;
+    // Re-render les deux onglets
     renderPlan();
     renderUpcoming();
   }
@@ -1161,14 +1181,20 @@ function matchSession(sess, weekStartStr) {
   var today = new Date(); today.setHours(0,0,0,0);
   var match = runs.filter(function(a){var d=new Date(a.start_date);d.setHours(0,0,0,0);return Math.abs(d-sessDate)<=86400000;})[0];
   if(!match) return sessDate < today ? 'missed' : null;
-  var actKm=(match.distance||0)/1000, planKm=parseFloat(sess.dist||0);
+  var actKm=(match.distance||0)/1000;
+  var planKm=parseFloat(sess.dist||0);
+  var actSPK = match.moving_time&&match.distance ? 1000/(match.distance/match.moving_time) : null;
   var pm=(sess.target||'').match(/(\d+)'(\d+)/);
-  if(pm && planKm>0){
-    var planSPK=parseInt(pm[1])*60+parseInt(pm[2]);
-    var actSPK=1000/((match.distance/(match.moving_time||1))||1);
-    return (Math.abs(actKm-planKm)/planKm<0.05 && Math.abs(actSPK-planSPK)/planSPK<0.05)?'validated':'done';
+  var planSPK = pm ? parseInt(pm[1])*60+parseInt(pm[2]) : null;
+  if(planKm > 0 && planSPK && actSPK) {
+    // Validée si : km réalisé >= planifié OU écart < 5%, ET allure <= planifiée OU écart < 5%
+    // (allure en s/km : plus petit = plus rapide)
+    var kmOk   = actKm >= planKm || Math.abs(actKm-planKm)/planKm < 0.05;
+    var paceOk = actSPK <= planSPK || Math.abs(actSPK-planSPK)/planSPK < 0.05;
+    return (kmOk && paceOk) ? 'validated' : 'done';
   }
-  return planKm>0?(Math.abs(actKm-planKm)/planKm<0.05?'validated':'done'):'validated';
+  if(planKm > 0) return (actKm >= planKm*0.95) ? 'validated' : 'done';
+  return 'validated';
 }
 function sessBadge(status){
   if(status==='validated')return '<span style="font-size:9px;font-weight:700;color:#16a34a;background:#dcfce7;border:1px solid #bbf7d0;padding:2px 6px;border-radius:10px">✓ Validée</span>';
@@ -1754,15 +1780,20 @@ function injectStravaData(activities) {
   sortedWks.forEach(function(wk){ WEEKLY_LOADS.push(+byWeek[wk].km.toFixed(1)); });
   window.WEEKLY_LABELS = sortedWks.map(fmtWeekLabel);
 
-  // Compliance : toutes les semaines du plan
+  // Compliance : toutes les semaines du plan (passées et futures)
+  // Pour les semaines futures, done=0 ; pour les passées, done=km Strava de la semaine
   if(typeof weeks!=='undefined' && weeks.length) {
     var planLabels=[], planKm=[], doneKm=[];
+    var todayMs = new Date().setHours(0,0,0,0);
     weeks.forEach(function(w){
       if(!w.weekStart) return;
+      var wStart = new Date(w.weekStart).setHours(0,0,0,0);
       planLabels.push(fmtWeekLabel(w.weekStart));
       planKm.push(w.km||0);
-      var wkStr=weekMonday(w.weekStart);
-      doneKm.push(byWeek[wkStr] ? +byWeek[wkStr].km.toFixed(1) : 0);
+      // Km réalisés = Strava seulement si la semaine est passée ou en cours
+      var wkStr = weekMonday(w.weekStart);
+      var realized = (wStart <= todayMs && byWeek[wkStr]) ? +byWeek[wkStr].km.toFixed(1) : 0;
+      doneKm.push(realized);
     });
     window.COMP_DATA = {labels:planLabels, planned:planKm, done:doneKm};
   }

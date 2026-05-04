@@ -229,11 +229,12 @@ tbody td{padding:10px 12px;font-size:12px}
     <span class="logo-txt">Training</span>
   </div>
   <div class="sep"></div>
-  <div class="av">A</div>
-  <div class="hdr-name">Adrien D.</div>
+  <img id="hdr-avatar" class="av-img" src="" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;display:none">
+  <div id="hdr-avatar-fallback" class="av">A</div>
+  <div id="hdr-name" class="hdr-name">—</div>
   <div class="hdr-r">
-    <div class="pulse-wrap"><div class="pulse"></div><span>Sync dans 4m 12s</span></div>
-    <button class="hdr-btn">↻ Sync</button>
+    <div class="pulse-wrap"><div class="pulse"></div><span id="countdown-txt">Sync dans —</span></div>
+    <button class="hdr-btn" onclick="refreshStrava()">↻ Sync</button>
     <a href="/api/logout" class="hdr-btn">Déconnexion</a>
   </div>
 </div>
@@ -548,23 +549,41 @@ const K_CTL = 1 - 1/42, K_ATL = 1 - 1/7;
 // ═══ BOOT & AUTH ═══
 async function boot() {
   setLoader(true, 'Vérification...');
-  // Gérer les erreurs OAuth dans l'URL
   const params = new URLSearchParams(location.search);
   const err = params.get('error');
   if (err) {
     history.replaceState({}, '', '/');
     showLoginError({access_denied:'Accès refusé.',token_exchange:'Erreur de connexion.',server_error:'Erreur serveur.'}[err] || 'Erreur inattendue.');
   }
+
+  // Étape 1 : auth check
+  let me;
   try {
-    const me = await fetch('/api/me').then(r => r.json());
-    if (!me.authenticated) { setLoader(false); showLogin(); return; }
-    setAthlete(me.athlete);
-    showApp();
-    loadPlanFromStorage();
-    await loadActivities();
-    startCountdown();
-    startSyncCountdown();
-  } catch { setLoader(false); showLogin(); }
+    const res = await fetch('/api/me');
+    me = await res.json();
+    console.log('[boot] /api/me:', me);
+  } catch(e) {
+    console.error('[boot] /api/me failed:', e);
+    setLoader(false); showLogin(); return;
+  }
+
+  if (!me || !me.authenticated) {
+    console.log('[boot] Not authenticated, showing login');
+    setLoader(false); showLogin(); return;
+  }
+
+  // Étape 2 : afficher l'app TOUT DE SUITE (avant tout le reste qui peut planter)
+  try { setAthlete(me.athlete); } catch(e) { console.warn('[boot] setAthlete:', e); }
+  showApp();
+  console.log('[boot] App shown');
+
+  // Étape 3 : charger les données — chaque étape isolée pour ne pas casser l'app
+  try { loadPlanFromStorage(); } catch(e) { console.warn('[boot] loadPlanFromStorage:', e); }
+  try { await loadActivities(); } catch(e) { console.warn('[boot] loadActivities:', e); }
+  try { if (typeof startCountdown === 'function') startCountdown(); } catch(e) { console.warn('[boot] startCountdown:', e); }
+  try { if (typeof startSyncCountdown === 'function') startSyncCountdown(); } catch(e) { console.warn('[boot] startSyncCountdown:', e); }
+
+  console.log('[boot] Done');
 }
 
 function showLogin() {
@@ -804,9 +823,18 @@ function tickSync() {
 
 // ═══ ATHLETE ═══
 function setAthlete(a) {
-  const n = document.getElementById('hdr-name'), av = document.getElementById('hdr-avatar');
-  if(n) n.textContent = `${a.firstname||''} ${a.lastname||''}`.trim();
-  if(av && a.profile) av.src = a.profile;
+  if(!a) return;
+  const n = document.getElementById('hdr-name');
+  const av = document.getElementById('hdr-avatar');
+  const fb = document.getElementById('hdr-avatar-fallback');
+  if(n) n.textContent = `${a.firstname||''} ${a.lastname||''}`.trim() || 'Athlète';
+  if(av && a.profile) {
+    av.src = a.profile;
+    av.style.display = 'block';
+    if(fb) fb.style.display = 'none';
+  } else if(fb && a.firstname) {
+    fb.textContent = a.firstname[0].toUpperCase();
+  }
   ST.athlete = a;
 }
 

@@ -180,6 +180,7 @@ tbody td{padding:10px 12px;font-size:12px}
   .sess-hd>*:nth-child(4),.sess-row>*:nth-child(4){display:block}
   .panel{padding:14px}
 }
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.35}}
 </style>
 </head>
 <body>
@@ -211,7 +212,6 @@ tbody td{padding:10px 12px;font-size:12px}
   <div style="font-family:'Inter',sans-serif;font-size:48px;font-weight:800;color:var(--or);animation:pulse2 1.2s ease-in-out infinite">TRAIN</div>
   <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3)" id="loader-txt">Chargement...</div>
 </div>
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.35}}
 
 <div id="app-content" style="display:none"><div class="countdown-banner" id="countdown-banner">
   <span class="cd-label cd-event-label">Marathon Paris dans</span>
@@ -646,6 +646,142 @@ function adaptPlanToStrava() {
     });
   });
   savePlanToStorage();
+}
+
+
+// ═══ PLAN STORAGE ═══
+function savePlanToStorage(){ try{ localStorage.setItem('training_plan', JSON.stringify(ST.plan)); }catch(e){} }
+
+function loadPlanFromStorage(){
+  try {
+    const raw = localStorage.getItem('training_plan');
+    if(raw) {
+      ST.plan = JSON.parse(raw);
+      if(ST.plan) {
+        const setup = document.getElementById('goal-setup');
+        const disp  = document.getElementById('plan-display');
+        if(setup) setup.style.display = 'none';
+        if(disp)  disp.style.display  = 'block';
+        renderPlan();
+      }
+    }
+  } catch(e) { console.warn('loadPlanFromStorage:', e); }
+}
+
+function resetPlan(){
+  if(!confirm('Supprimer le plan et recommencer ?')) return;
+  ST.plan = null;
+  localStorage.removeItem('training_plan');
+  const setup = document.getElementById('goal-setup');
+  const disp  = document.getElementById('plan-display');
+  const wks   = document.getElementById('plan-weeks');
+  if(setup) setup.style.display = 'block';
+  if(disp)  disp.style.display  = 'none';
+  if(wks)   wks.innerHTML = '';
+}
+
+function toggleSetup(){
+  const el = document.getElementById('goal-setup');
+  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ═══ DASH ═══
+function renderDash(){
+  if(!ST.plan) {
+    const ng = document.getElementById('dash-no-goal');
+    const dc = document.getElementById('dash-content');
+    if(ng) ng.style.display = 'block';
+    if(dc) dc.style.display = 'none';
+    return;
+  }
+  const ng = document.getElementById('dash-no-goal');
+  const dc = document.getElementById('dash-content');
+  if(ng) ng.style.display = 'none';
+  if(dc) dc.style.display = 'block';
+  try { updateScoreRing(); } catch(e){ console.warn('updateScoreRing:', e); }
+  try { renderDashProgress(); } catch(e){ console.warn('renderDashProgress:', e); }
+  try { renderUpcoming(); } catch(e){ console.warn('renderUpcoming:', e); }
+  try { renderComplianceChart(); } catch(e){ console.warn('renderComplianceChart:', e); }
+}
+
+
+
+
+
+// ═══ PREDICTION & SCORE HELPERS ═══
+// ═══ DASH HELPERS ═══
+
+function renderDashProgress(){
+  if(!ST.plan) return;
+  const {goal, weeks} = ST.plan;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = new Date(goal.dateStr);
+  const daysLeft = Math.max(0, Math.ceil((raceDate - today) / 86400000));
+  const totalSess = weeks.reduce((s,w)=>s+w.sessions.length, 0);
+  const doneSess  = weeks.reduce((s,w)=>s+w.sessions.filter(se=>se.completed).length, 0);
+  const totalKm   = weeks.reduce((s,w)=>s+(w.kmTarget||0), 0);
+  const doneKm    = weeks.reduce((s,w)=>s+w.sessions.filter(se=>se.completed).reduce((a,se)=>a+(se.stravaDistKm||se.distKm||0),0), 0);
+  const pS = totalSess > 0 ? doneSess/totalSess : 0;
+  const pK = totalKm > 0 ? Math.min(doneKm/totalKm, 1) : 0;
+  const el = document.getElementById('dash-progress');
+  if(!el) return;
+  el.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--tx2)">Séances réalisées</span>
+        <span style="font-weight:700">${doneSess} / ${totalSess}</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(pS*100)}%;background:var(--or)"></div></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--tx2)">Kilomètres accumulés</span>
+        <span style="font-weight:700">${Math.round(doneKm)} / ${Math.round(totalKm)} km</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(pK*100)}%;background:var(--bl)"></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div style="text-align:center;padding:12px;background:var(--or-l);border:1px solid var(--or-m);border-radius:8px">
+        <div style="font-size:26px;font-weight:800;color:var(--or)">${daysLeft}</div>
+        <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">jours restants</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:8px">
+        <div style="font-size:26px;font-weight:800;color:var(--tx)">${Math.ceil(daysLeft/7)}</div>
+        <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">semaines</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:11px;background:var(--or-l);border:2px solid var(--or-m);border-radius:8px;text-align:center">
+      <div style="font-size:8px;color:var(--tx2);margin-bottom:2px;font-weight:500">Objectif</div>
+      <div style="font-size:14px;font-weight:800;color:var(--or)">${goal.label||'Marathon'} · ${goal.dateStr||'—'}${goal.time?' · '+goal.time:''}</div>
+    </div>`;
+}
+
+function renderComplianceChart(){
+  if(!ST.plan) return;
+  const {weeks} = ST.plan;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const past = weeks.filter(w => today > new Date(new Date(w.weekStart).getTime()+6*86400000)).slice(-8);
+  if(!past.length) return;
+  const labels  = past.map(w=>`S${w.num}`);
+  const planned = past.map(w=>w.kmTarget||0);
+  const done    = past.map(w=>w.sessions.filter(s=>s.completed).reduce((a,s)=>a+(s.stravaDistKm||s.distKm||0),0));
+  if(ST.charts.comp) ST.charts.comp.destroy();
+  const ctx = document.getElementById('c-comp');
+  if(!ctx) return;
+  ST.charts.comp = new Chart(ctx,{type:'bar',data:{
+    labels,
+    datasets:[
+      {label:'Planifié',data:planned,backgroundColor:'#e8e8e8',borderColor:'#d0d0d0',borderWidth:1,borderRadius:4},
+      {label:'Réalisé', data:done,  backgroundColor:'rgba(252,76,2,.18)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},
+      tooltip:{backgroundColor:'#fff',borderColor:'#e8e8e8',borderWidth:1,titleColor:'#6b6b6b',bodyColor:'#1a1a1a',callbacks:{label:c=>` ${c.parsed.y} km`}}},
+    scales:{
+      x:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}},
+      y:{ticks:{color:'#a0a0a0',font:{size:10},callback:v=>v+'km'},grid:{color:'#f0f0f0'}}
+    }
+  }});
 }
 
 // ═══ SYNC COUNTDOWN ═══
@@ -1135,18 +1271,19 @@ function renderAll() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // FC repos
-  const hrRest = loadHRRest();
-  const hrInp = document.getElementById('hrrest-input');
-  if(hrInp) hrInp.value = hrRest;
-  // Plan depuis localStorage
-  loadPlanFromStorage();
-  // Initialiser les charts et UI statiques
-  renderObjGrid();
-  initCTLDisplay();
-  updateVO2(hrRest);
-  // Boot (auth + Strava)
-  boot();
+  // Boot en premier — affiche loader, vérifie auth, charge Strava
+  boot().then(() => {
+    // Après auth réussie : initialiser UI statiques
+    try {
+      const hrRest = loadHRRest();
+      const hrInp = document.getElementById('hrrest-input');
+      if(hrInp) hrInp.value = hrRest;
+      loadPlanFromStorage();
+      renderObjGrid();
+      try { initCTLDisplay(); } catch(e) { console.warn('initCTLDisplay:', e); }
+      try { updateVO2(hrRest); } catch(e) { console.warn('updateVO2:', e); }
+    } catch(e) { console.warn('UI init error:', e); }
+  }).catch(e => console.error('Boot failed:', e));
 });
 
 // ═══ UTILS ═══

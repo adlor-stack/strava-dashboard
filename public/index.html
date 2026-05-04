@@ -692,15 +692,21 @@ function renderDashProgress() {
   const daysLeft  = raceDate  ? Math.max(0, Math.ceil((raceDate-today)/86400000))  : null;
   const weeksLeft = daysLeft !== null ? Math.ceil(daysLeft/7) : null;
   
-  // Sessions : toutes les sessions du plan, celles réalisées (via matchSession)
-  const allSessions = [];
-  weeks.forEach((w,wi) => (w.sessions||[]).forEach((s,si) => {
-    const status = matchSession(s, w.weekStart);
-    allSessions.push({ s, wi, si, status });
-  }));
-  const totalSess = allSessions.length;
-  const doneSess  = allSessions.filter(x => x.status==='validated'||x.status==='done'||x.s.done).length;
-  const pctSess   = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
+  // Sessions : uniquement celles dont la date est passée
+  let totalSess = 0, doneSess = 0;
+  const todayMs = new Date().setHours(0,0,0,0);
+  weeks.forEach(function(w) {
+    (w.sessions||[]).forEach(function(s) {
+      const ws = w.weekStart ? parseLocalDate(w.weekStart) : null;
+      if(!ws) return;
+      const sd = new Date(ws); sd.setDate(ws.getDate()+(s.dayOffset||0)); sd.setHours(0,0,0,0);
+      if(sd.getTime() > todayMs) return; // future
+      totalSess++;
+      const st = matchSession(s, w.weekStart);
+      if(st === 'validated' || st === 'done') doneSess++;
+    });
+  });
+  const pctSess = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
   
   // Km : planifiés (total plan) vs réalisés (Strava depuis début prépa)
   const totalKm = weeks.reduce((s,w)=>s+(w.km||0), 0);
@@ -719,7 +725,7 @@ function renderDashProgress() {
 
   // Indicateur de forme — assiduité
   set('ind-assiduite', pctSess+'%');
-  set('ind-assiduite-sub', doneSess+' / '+totalSess+' séances');
+  set('ind-assiduite-sub', doneSess+' / '+totalSess+' séances passées');
   setW('prog-assiduite', pctSess);
 }
 function updateScoreRing(){
@@ -735,9 +741,22 @@ function updateScoreRing(){
   const hrRest=loadHRRest();
   const vo2=computeVO2(hrRest);
   const vScore=vo2Score(vo2);
-  // Assiduité depuis le plan réel
-  const totalSess = (typeof weeks!=='undefined') ? weeks.reduce((s,w)=>s+(w.sessions||[]).length,0) : 0;
-  const doneSess  = (typeof weeks!=='undefined') ? weeks.reduce((s,w)=>s+(w.sessions||[]).filter(se=>se.done).length,0) : 0;
+  // Assiduité : séances dont la date est passée vs réalisées (via Strava)
+  const today_a = new Date(); today_a.setHours(0,0,0,0);
+  let totalSess = 0, doneSess = 0;
+  if(typeof weeks !== 'undefined') {
+    weeks.forEach(function(w) {
+      (w.sessions||[]).forEach(function(s) {
+        const ws = w.weekStart ? parseLocalDate(w.weekStart) : null;
+        if(!ws) return;
+        const sd = new Date(ws); sd.setDate(ws.getDate()+(s.dayOffset||0)); sd.setHours(0,0,0,0);
+        if(sd > today_a) return; // séance future → pas comptée
+        totalSess++;
+        const st = matchSession(s, w.weekStart);
+        if(st === 'validated' || st === 'done') doneSess++;
+      });
+    });
+  }
   const assiduite = totalSess > 0 ? Math.round((doneSess/totalSess)*100) : 0;
   const consensus=computeConsensus();
   const diff=consensus-TARGET_MIN;
@@ -1355,10 +1374,16 @@ function getStartDate() {
 }
 
 function weekMonday(dateStr) {
-  var d=new Date(dateStr);d.setHours(0,0,0,0);
-  var day=d.getDay();
-  d.setDate(d.getDate()-(day===0?6:day-1));
-  return d.toISOString().slice(0,10);
+  // Utilise la date locale (pas UTC) pour éviter les décalages de fuseau
+  var d = new Date(dateStr);
+  d.setHours(0,0,0,0);
+  var day = d.getDay(); // 0=dim
+  d.setDate(d.getDate() - (day===0 ? 6 : day-1));
+  // Retourner en format local YYYY-MM-DD
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
 }
 
 function fmtDate(isoStr) {
@@ -1732,10 +1757,10 @@ function getStartDate() {
 
 function weekMonday(dateStr) {
   var d = new Date(dateStr); d.setHours(0,0,0,0);
-  var day = d.getDay(); // 0=Sun
-  var diff = day===0 ? -6 : 1-day;
-  d.setDate(d.getDate()+diff);
-  return d.toISOString().slice(0,10);
+  var day = d.getDay();
+  d.setDate(d.getDate() - (day===0 ? 6 : day-1));
+  var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
 }
 
 function fmtWeekLabel(isoMonday) {
@@ -1906,12 +1931,11 @@ function buildCompData() {
 }
 
 function weekMonday(dateStr) {
-  if(window._weekMonday) return window._weekMonday(dateStr);
   var d = new Date(dateStr); d.setHours(0,0,0,0);
   var day = d.getDay();
-  var diff = day===0 ? -6 : 1-day;
-  d.setDate(d.getDate()+diff);
-  return d.toISOString().slice(0,10);
+  d.setDate(d.getDate() - (day===0 ? 6 : day-1));
+  var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
 }
 function applyPlan(data) {
   window.PLAN_META = data;

@@ -11,13 +11,16 @@ function parseSession(req) {
   }
 }
 
-function setSessionCookie(res, session) {
+function setSessionCookie(req, res, session) {
+  const isHttps = req.headers['x-forwarded-proto'] === 'https' ||
+                  process.env.VERCEL_ENV === 'production' ||
+                  process.env.VERCEL_ENV === 'preview';
   const encoded = Buffer.from(JSON.stringify(session)).toString('base64');
   res.setHeader(
     'Set-Cookie',
     cookie.serialize('strava_session', encoded, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30,
       path: '/',
@@ -47,25 +50,21 @@ async function refreshAccessToken(session) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
   let session = parseSession(req);
 
   if (!session) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  // Rafraîchir le token si expiré (marge 60s)
   if (Date.now() / 1000 > session.expiresAt - 60) {
     try {
       session = await refreshAccessToken(session);
-      setSessionCookie(res, session);
+      setSessionCookie(req, res, session);
     } catch (err) {
       return res.status(401).json({ error: 'Token expiré, reconnecte-toi.' });
     }
   }
 
-  // Endpoint demandé (ex: /api/strava?path=/athlete/activities&per_page=100)
   const { path, ...params } = req.query;
   if (!path) return res.status(400).json({ error: 'Paramètre path manquant' });
 

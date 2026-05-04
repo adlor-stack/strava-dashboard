@@ -26,7 +26,6 @@ export default async function handler(req, res) {
       return res.redirect('/?error=token_exchange');
     }
 
-    // Stocker les tokens dans un cookie signé HttpOnly
     const session = {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -41,13 +40,18 @@ export default async function handler(req, res) {
 
     const encoded = Buffer.from(JSON.stringify(session)).toString('base64');
 
+    // Détecter si on est en HTTPS via les headers de Vercel
+    const isHttps = req.headers['x-forwarded-proto'] === 'https' ||
+                    process.env.VERCEL_ENV === 'production' ||
+                    process.env.VERCEL_ENV === 'preview';
+
     res.setHeader(
       'Set-Cookie',
       cookie.serialize('strava_session', encoded, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isHttps,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 jours
+        maxAge: 60 * 60 * 24 * 30,
         path: '/',
       })
     );

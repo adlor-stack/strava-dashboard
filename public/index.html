@@ -742,24 +742,34 @@ function renderDashProgress() {
   const daysLeft  = raceDate  ? Math.max(0, Math.ceil((raceDate-today)/86400000))  : null;
   const weeksLeft = daysLeft !== null ? Math.ceil(daysLeft/7) : null;
   
-  // Sessions : uniquement celles dont la date est passée
-  let totalSess = 0, doneSess = 0;
+  // Avancement : toutes les séances du plan
+  const totalSess = weeks.reduce(function(s,w){ return s+(w.sessions||[]).length; }, 0);
+  // Séances réalisées = celles matchées par Strava (passées uniquement)
+  let doneSess = 0;
   const todayMs = new Date().setHours(0,0,0,0);
   weeks.forEach(function(w) {
     (w.sessions||[]).forEach(function(s) {
       if(!w.weekStart) return;
       var _p = w.weekStart.split('-');
-      const ws = new Date(+_p[0], +_p[1]-1, +_p[2]);
-      if(!ws || isNaN(ws)) return;
       const sd = new Date(+_p[0], +_p[1]-1, +_p[2] + (s.dayOffset||0));
       sd.setHours(0,0,0,0);
-      if(sd.getTime() > todayMs) return; // future
-      totalSess++;
+      if(sd.getTime() > todayMs) return; // future → pas encore comptée
       const st = matchSession(s, w.weekStart);
       if(st === 'validated' || st === 'done') doneSess++;
     });
   });
-  const pctSess = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
+  // Séances passées (pour l'assiduité)
+  let sessPassed = 0;
+  weeks.forEach(function(w) {
+    (w.sessions||[]).forEach(function(s) {
+      if(!w.weekStart) return;
+      var _p = w.weekStart.split('-');
+      const sd = new Date(+_p[0], +_p[1]-1, +_p[2] + (s.dayOffset||0));
+      sd.setHours(0,0,0,0);
+      if(sd.getTime() <= todayMs) sessPassed++;
+    });
+  });
+  const pctSess = sessPassed > 0 ? Math.round(doneSess/sessPassed*100) : 0;
   
   // Km : planifiés (total plan) vs réalisés (Strava depuis début prépa)
   const totalKm = weeks.reduce((s,w)=>s+(w.km||0), 0);
@@ -769,7 +779,7 @@ function renderDashProgress() {
   const set  = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=String(v); };
   const setW = (id,v) => { const el=document.getElementById(id); if(el) el.style.width=v+'%'; };
   
-  set('dash-done-sess', doneSess+' / '+totalSess);
+  set('dash-done-sess', doneSess+' / '+totalSess); // total = toutes les séances du plan
   setW('prog-sess', pctSess);
   set('dash-done-km', Math.round(stravaKm)+' / '+Math.round(totalKm)+' km');
   setW('prog-km', pctKm);
@@ -778,7 +788,7 @@ function renderDashProgress() {
 
   // Indicateur de forme — assiduité
   set('ind-assiduite', pctSess+'%');
-  set('ind-assiduite-sub', doneSess+' / '+totalSess+' séances passées');
+  set('ind-assiduite-sub', doneSess+' / '+sessPassed+' séances passées');
   setW('prog-assiduite', pctSess);
 }
 function updateScoreRing(){
@@ -807,8 +817,15 @@ function updateScoreRing(){
   }
   const assiduite = totalSess > 0 ? Math.round((doneSess/totalSess)*100) : 0;
   const consensus=computeConsensus();
-  const diff=consensus-TARGET_MIN;
-  const diffScore=Math.max(0,Math.min(100,100-Math.round(diff/TARGET_MIN*200)));
+  // Lire l'écart depuis initPredDisplay pour éviter recalcul divergent
+  const predDiffEl = document.getElementById('pred-diff');
+  let diff = consensus - TARGET_MIN;
+  if(predDiffEl) {
+    const txt = predDiffEl.textContent || '';
+    const pm = txt.match(/([+-]?\d+)/);
+    if(pm) diff = parseInt(pm[1]);
+  }
+  const diffScore=Math.max(0,Math.min(100,100-Math.round(Math.abs(diff)/TARGET_MIN*200)));
   const tsb=lastTSB;
   const tScore=tsbScore(tsb);
   const globalScore=Math.round(assiduite*.3+vScore*.25+diffScore*.25+tScore*.2);

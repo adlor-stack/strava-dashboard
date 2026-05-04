@@ -588,7 +588,31 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000); updateCountdown();
 
 // ═══ PREDICTION MODELS ═══
-const REFS = { '10k':{ timeMin:47 }, semi:{ timeMin:105.5 } };
+var REFS = {}; // peuplé depuis les meilleures activités Strava
+
+function computeREFS(activities) {
+  // Trouver les meilleures performances sur distances proches de 10k et semi
+  var best10k = null, bestSemi = null;
+  activities.forEach(function(a) {
+    if(!a.distance || !a.moving_time) return;
+    var km = a.distance / 1000;
+    var min = a.moving_time / 60;
+    // 10k : entre 8 et 12 km
+    if(km >= 8 && km <= 12) {
+      // Extrapoler au 10k exact via Riegel
+      var t10k = min * Math.pow(10/km, 1.06);
+      if(!best10k || t10k < best10k) best10k = t10k;
+    }
+    // Semi : entre 18 et 23 km
+    if(km >= 18 && km <= 23) {
+      var tSemi = min * Math.pow(21.1/km, 1.06);
+      if(!bestSemi || tSemi < bestSemi) bestSemi = tSemi;
+    }
+  });
+  REFS = {};
+  if(best10k)  REFS['10k']  = { timeMin: +best10k.toFixed(1) };
+  if(bestSemi) REFS['semi'] = { timeMin: +bestSemi.toFixed(1) };
+}
 
 function riegel(t1,d1,d2){ return t1*Math.pow(d2/d1,1.06); }
 function cameronA(d){ return 13.49681-0.048865*d+2.438936/Math.pow(d,0.7905); }
@@ -599,18 +623,34 @@ function tanda(avgPaceSec,avgKm){ return Math.exp(4.63746+0.002449*avgPaceSec-0.
 const HISTORY = []; // rempli par injectStravaData depuis les vraies activités Strava
 
 function computeConsensus(){
-  const r1=riegel(REFS.semi.timeMin,21.1,MARATHON_KM);
-  const r2=REFS['10k']?riegel(REFS['10k'].timeMin,10,MARATHON_KM):null;
-  const rP=r2?(r1*.6+r2*.4):r1;
-  const c1=cameron(REFS.semi.timeMin,21.1,MARATHON_KM);
-  const c2=REFS['10k']?cameron(REFS['10k'].timeMin,10,MARATHON_KM):null;
-  const cP=c2?(c1*.65+c2*.35):c1;
-  const vP=vv(REFS);
-  const avgPace=HISTORY.reduce((s,w)=>s+w.pace*w.km,0)/HISTORY.reduce((s,w)=>s+w.km,0);
-  const avgKm=HISTORY.reduce((s,w)=>s+w.km,0)/HISTORY.length;
-  const tP=tanda(avgPace,avgKm);
-  const preds=[rP,cP,vP,tP].filter(Boolean);
-  return preds.reduce((s,p)=>s+p,0)/preds.length;
+  const preds = [];
+  // Riegel + Cameron depuis performances de référence
+  if(REFS.semi && REFS.semi.timeMin) {
+    preds.push(riegel(REFS.semi.timeMin, 21.1, MARATHON_KM) * 0.6);
+    preds.push(cameron(REFS.semi.timeMin, 21.1, MARATHON_KM) * 0.6);
+    if(REFS['10k'] && REFS['10k'].timeMin) {
+      preds[0] = riegel(REFS.semi.timeMin,21.1,MARATHON_KM)*.6 + riegel(REFS['10k'].timeMin,10,MARATHON_KM)*.4;
+      preds[1] = cameron(REFS.semi.timeMin,21.1,MARATHON_KM)*.65 + cameron(REFS['10k'].timeMin,10,MARATHON_KM)*.35;
+    }
+  } else if(REFS['10k'] && REFS['10k'].timeMin) {
+    preds.push(riegel(REFS['10k'].timeMin, 10, MARATHON_KM));
+    preds.push(cameron(REFS['10k'].timeMin, 10, MARATHON_KM));
+  }
+  // V&V
+  const vP = vv(REFS);
+  if(vP) preds.push(vP);
+  // Tanda depuis HISTORY (données Strava réelles)
+  if(HISTORY.length) {
+    const totalKm = HISTORY.reduce((s,w)=>s+w.km,0);
+    if(totalKm > 0) {
+      const avgPace = HISTORY.reduce((s,w)=>s+w.pace*w.km,0) / totalKm;
+      const avgKm   = totalKm / HISTORY.length;
+      const tP = tanda(avgPace, avgKm);
+      if(tP && !isNaN(tP)) preds.push(tP);
+    }
+  }
+  if(!preds.length) return TARGET_MIN + 30; // valeur par défaut neutre si aucune donnée
+  return preds.reduce((s,p)=>s+p,0) / preds.length;
 }
 
 function fmtT(min){ const h=Math.floor(min/60),m=Math.round(min%60); return `${h}h${String(m).padStart(2,'0')}` }
@@ -1616,6 +1656,7 @@ function applyPlan(data){
   updateSummaryBar(data);
   try{if(typeof renderPlan==='function')renderPlan();}catch(e){}
   try{if(typeof renderUpcoming==='function')renderUpcoming();}catch(e){}
+  try{if(typeof renderDashProgress==='function')renderDashProgress();}catch(e){}
   if(window.__allActivities)injectStravaData(window.__allActivities);
 }
 
@@ -1800,7 +1841,9 @@ function injectStravaData(activities) {
   }).sort(function(a,b){return new Date(a.start_date)-new Date(b.start_date);});
 
   window.STRAVA_RUNS = runs;
-  window._weekMonday = weekMonday;  // exposer pour buildCompData
+  window._weekMonday = weekMonday;
+  // Calculer REFS depuis toutes les activités (pas seulement depuis startDate)
+  computeREFS(activities);  // exposer pour buildCompData
 
   // Stats
   var totKm=runs.reduce(function(s,a){return s+(a.distance||0);},0)/1000;
@@ -1879,6 +1922,7 @@ function injectStravaData(activities) {
   if(typeof initPredDisplay==='function') initPredDisplay();
   if(typeof initCTLDisplay==='function') initCTLDisplay();
   if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+  if(typeof renderDashProgress==='function') renderDashProgress();
   if(typeof renderDashProgress==='function') renderDashProgress();
 }
 
@@ -1987,6 +2031,7 @@ function applyPlan(data) {
 
   if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
   if(typeof renderDashProgress==='function') renderDashProgress();
+  if(typeof renderDashProgress==='function') renderDashProgress();
   if(typeof renderPlan==='function') renderPlan();
   if(typeof renderUpcoming==='function') renderUpcoming();
   if(window.__allActivities) injectStravaData(window.__allActivities);
@@ -2014,6 +2059,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var raw=localStorage.getItem('imported_plan');
       if(raw) applyPlan(JSON.parse(raw));
       else if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+  if(typeof renderDashProgress==='function') renderDashProgress();
   if(typeof renderDashProgress==='function') renderDashProgress();
     } catch(e) {}
     // Charger Strava

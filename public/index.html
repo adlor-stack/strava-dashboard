@@ -1172,17 +1172,32 @@ function saveModal(){
   const si = parseInt(modal.dataset.si);
   if(!isNaN(wi) && !isNaN(si) && weeks[wi] && weeks[wi].sessions[si]) {
     const s = weeks[wi].sessions[si];
+    const w = weeks[wi];
     const get = id => { const el=document.getElementById(id); return el?el.value:null; };
     const tas = document.querySelectorAll('.modal .fg .field textarea');
-    if(get('m-name'))  s.name  = get('m-name');
-    if(get('m-type'))  s.type  = get('m-type');
-    // Durée et distance
     const numInputs = document.querySelectorAll('.modal .fg .field input[type="number"]');
+    if(get('m-name')) s.name = get('m-name');
+    if(get('m-type')) s.type = get('m-type');
     if(numInputs[0] && numInputs[0].value) s.dur  = parseInt(numInputs[0].value);
     if(numInputs[1] && numInputs[1].value) s.dist = numInputs[1].value;
     if(tas[0]) s.desc  = tas[0].value;
     if(tas[1]) s.watch = tas[1].value;
-    // Re-render les deux onglets
+    // Mettre à jour dayOffset depuis le select Jour
+    const dayEl = document.getElementById('m-day');
+    if(dayEl && dayEl.value) {
+      const DAY_MAP = {'Lundi':0,'Mardi':1,'Mercredi':2,'Jeudi':3,'Vendredi':4,'Samedi':5,'Dimanche':6};
+      const newOffset = DAY_MAP[dayEl.value];
+      if(newOffset !== undefined) {
+        s.dayOffset = newOffset;
+        // Recalculer s.day pour l'affichage
+        if(w.weekStart) {
+          const d = new Date(w.weekStart);
+          d.setDate(d.getDate() + newOffset);
+          const DAYS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+          s.day = DAYS[(d.getDay()+6)%7] + ' ' + d.getDate();
+        }
+      }
+    }
     renderPlan();
     renderUpcoming();
   }

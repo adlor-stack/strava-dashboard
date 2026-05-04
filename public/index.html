@@ -180,15 +180,12 @@ tbody td{padding:10px 12px;font-size:12px}
   .sess-hd>*:nth-child(4),.sess-row>*:nth-child(4){display:block}
   .panel{padding:14px}
 }
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.35}}
 </style>
 </head>
 <body>
-
-<!-- COUNTDOWN -->
-<!-- LOGIN -->
+<!-- LOGIN SCREEN -->
 <div id="login-screen" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg);position:relative;overflow:hidden">
-  <div style="position:absolute;font-family:'Inter',sans-serif;font-weight:800;font-size:28vw;color:rgba(0,0,0,.03);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap">TRAIN</div>
+  <div style="position:absolute;font-family:'Inter',sans-serif;font-weight:800;font-size:28vw;color:rgba(0,0,0,.03);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;letter-spacing:-.04em">TRAIN</div>
   <div style="position:relative;z-index:1;width:100%;max-width:400px;background:var(--wh);border:1px solid var(--bd);border-radius:14px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
       <div style="width:36px;height:36px;background:var(--or);border-radius:8px;display:flex;align-items:center;justify-content:center">
@@ -197,24 +194,28 @@ tbody td{padding:10px 12px;font-size:12px}
       <span style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--or)">Training Dashboard</span>
     </div>
     <h1 style="font-size:40px;font-weight:800;line-height:1;margin-bottom:10px;color:var(--tx)">Prépare ton<br><span style="color:var(--or)">objectif.</span></h1>
-    <p style="color:var(--tx2);font-size:13px;line-height:1.7;margin-bottom:32px">Plan d'entraînement adaptatif, suivi Strava en temps réel, prédiction de performance. Connecte-toi pour commencer.</p>
+    <p style="color:var(--tx2);font-size:13px;line-height:1.7;margin-bottom:32px">Plan d'entraînement adaptatif, suivi Strava en temps réel, prédiction de performance.</p>
     <div id="login-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:12px;padding:10px 12px;border-radius:7px;margin-bottom:14px"></div>
-    <a href="/api/login" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--or);color:#fff;border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;padding:16px 24px;cursor:pointer;text-decoration:none;border-radius:8px;transition:background .15s;box-shadow:0 2px 8px rgba(252,76,2,.3)" onmouseover="this.style.background='#e04000'" onmouseout="this.style.background='var(--or)'">
+    <a href="/api/login" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--or);color:#fff;font-size:14px;font-weight:700;padding:16px 24px;text-decoration:none;border-radius:8px;box-shadow:0 2px 8px rgba(252,76,2,.3)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       Se connecter avec Strava
     </a>
-    <p style="margin-top:16px;font-size:11px;color:var(--tx3);text-align:center;line-height:1.6">Données du plan stockées dans ton navigateur.<br>Tes activités restent sur Strava.</p>
   </div>
 </div>
 
 <!-- LOADER -->
 <div id="app-loader" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-  <div style="font-family:'Inter',sans-serif;font-size:48px;font-weight:800;color:var(--or);animation:pulse2 1.2s ease-in-out infinite">TRAIN</div>
+  <div style="font-family:'Inter',sans-serif;font-size:48px;font-weight:800;color:var(--or)">TRAIN</div>
   <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3)" id="loader-txt">Chargement...</div>
 </div>
 
-<div id="app-content" style="display:none"><div class="countdown-banner" id="countdown-banner">
-  <span class="cd-label cd-event-label">Marathon Paris dans</span>
+<!-- APP CONTENT (caché jusqu'à auth) -->
+<div id="app-content" style="display:none">
+
+
+<!-- COUNTDOWN -->
+<div class="countdown-banner" id="countdown-banner">
+  <span class="cd-label">Marathon Paris dans</span>
   <span id="cd-mo">—</span><span class="cd-label">mois</span>
   <span id="cd-d">—</span><span class="cd-label">j</span>
   <span id="cd-h">—</span><span class="cd-label">h</span>
@@ -229,16 +230,16 @@ tbody td{padding:10px 12px;font-size:12px}
     <span class="logo-txt">Training</span>
   </div>
   <div class="sep"></div>
-  <img id="hdr-avatar" class="av-img" src="" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;display:none">
-  <div id="hdr-avatar-fallback" class="av">A</div>
-  <div id="hdr-name" class="hdr-name">—</div>
+  <div class="av">A</div>
+  <div class="hdr-name">Adrien D.</div>
   <div class="hdr-r">
-    <div class="pulse-wrap"><div class="pulse"></div><span id="countdown-txt">Sync dans —</span></div>
-    <button class="hdr-btn" onclick="refreshStrava()">↻ Sync</button>
-    <a href="/api/logout" class="hdr-btn">Déconnexion</a>
+    <div class="pulse-wrap"><div class="pulse"></div><span>Sync dans 4m 12s</span></div>
+    <button class="hdr-btn">↻ Sync</button>
+    <button class="hdr-btn">Déconnexion</button>
   </div>
 </div>
 
+<div class="demo-bar">⚡ Aperçu avec données fictives</div>
 
 <!-- TABS -->
 <nav class="tabs">
@@ -282,7 +283,13 @@ tbody td{padding:10px 12px;font-size:12px}
 <div id="tab-perf" class="panel">
 
   <!-- Stats globales -->
-  <div class="stats-row" id="perf-stats"></div>
+  <div class="stats-row" id="perf-stats">
+    <div class="sc"><div class="sl">Sorties</div><div class="sv">23</div><div class="ss">depuis début prépa</div></div>
+    <div class="sc"><div class="sl">Distance</div><div class="sv">312<span class="su">km</span></div></div>
+    <div class="sc"><div class="sl">Temps total</div><div class="sv" style="font-size:20px">28h14</div></div>
+    <div class="sc"><div class="sl">Dénivelé +</div><div class="sv">1<span class="su" style="font-size:11px">840m</span></div></div>
+    <div class="sc"><div class="sl">FC moy.</div><div class="sv">148<span class="su">bpm</span></div></div>
+  </div>
 
   <!-- VO2MAX -->
   <div class="card">
@@ -517,8 +524,6 @@ tbody td{padding:10px 12px;font-size:12px}
   </div>
 </div>
 
-</div><!-- /app-content -->
-
 <!-- MODAL -->
 <div class="modal-bg" id="modal">
   <div class="modal">
@@ -546,299 +551,34 @@ const MARATHON_KM = 42.195;
 const TARGET_MIN = 210; // 3h30
 const K_CTL = 1 - 1/42, K_ATL = 1 - 1/7;
 
-// ═══ BOOT & AUTH ═══
-async function boot() {
-  setLoader(true, 'Vérification...');
-  const params = new URLSearchParams(location.search);
-  const err = params.get('error');
-  if (err) {
-    history.replaceState({}, '', '/');
-    showLoginError({access_denied:'Accès refusé.',token_exchange:'Erreur de connexion.',server_error:'Erreur serveur.'}[err] || 'Erreur inattendue.');
-  }
-
-  // Étape 1 : auth check
-  let me;
-  try {
-    const res = await fetch('/api/me');
-    me = await res.json();
-    console.log('[boot] /api/me:', me);
-  } catch(e) {
-    console.error('[boot] /api/me failed:', e);
-    setLoader(false); showLogin(); return;
-  }
-
-  if (!me || !me.authenticated) {
-    console.log('[boot] Not authenticated, showing login');
-    setLoader(false); showLogin(); return;
-  }
-
-  // Étape 2 : afficher l'app TOUT DE SUITE (avant tout le reste qui peut planter)
-  try { setAthlete(me.athlete); } catch(e) { console.warn('[boot] setAthlete:', e); }
-  showApp();
-  console.log('[boot] App shown');
-
-  // Étape 3 : charger les données — chaque étape isolée pour ne pas casser l'app
-  try { loadPlanFromStorage(); } catch(e) { console.warn('[boot] loadPlanFromStorage:', e); }
-  try { await loadActivities(); } catch(e) { console.warn('[boot] loadActivities:', e); }
-  try { if (typeof startCountdown === 'function') startCountdown(); } catch(e) { console.warn('[boot] startCountdown:', e); }
-  try { if (typeof startSyncCountdown === 'function') startSyncCountdown(); } catch(e) { console.warn('[boot] startSyncCountdown:', e); }
-
-  console.log('[boot] Done');
+// ═══ COUNTDOWN ═══
+function updateCountdown() {
+  const now = new Date();
+  const diff = RACE_DATE - now;
+  if (diff <= 0) { document.getElementById('countdown-banner').textContent = '🏁 C\'est le jour J !'; return; }
+  // Calcul exact des mois et jours restants
+  const r = RACE_DATE;
+  let mo = (r.getFullYear() - now.getFullYear()) * 12 + (r.getMonth() - now.getMonth());
+  // Ajuster si le jour cible dans le mois n'est pas encore atteint
+  const nowDay = now.getDate(), rDay = r.getDate();
+  if (nowDay > rDay) mo--;
+  // Jours restants après soustraction des mois complets
+  const afterMonths = new Date(now.getFullYear(), now.getMonth() + mo, now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
+  const remainMs = RACE_DATE - afterMonths;
+  const d = Math.floor(remainMs / 86400000);
+  const h = Math.floor((remainMs % 86400000) / 3600000);
+  const m = Math.floor((remainMs % 3600000) / 60000);
+  const s = Math.floor((remainMs % 60000) / 1000);
+  const totalDays = Math.floor(diff / 86400000);
+  document.getElementById('cd-mo').textContent = mo;
+  document.getElementById('cd-d').textContent = d;
+  document.getElementById('cd-h').textContent = h;
+  document.getElementById('cd-m').textContent = String(m).padStart(2,'0');
+  document.getElementById('cd-s').textContent = String(s).padStart(2,'0');
+  document.getElementById('days-left').textContent = totalDays;
 }
+setInterval(updateCountdown, 1000); updateCountdown();
 
-function showLogin() {
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app-content').style.display = 'none';
-}
-function showApp() {
-  setLoader(false);
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app-content').style.display = 'block';
-}
-function showLoginError(msg) {
-  const el = document.getElementById('login-error');
-  if (el) { el.textContent = msg; el.style.display = 'block'; }
-}
-function setLoader(show, txt) {
-  const el = document.getElementById('app-loader');
-  if (el) el.style.display = show ? 'flex' : 'none';
-  if (txt) { const t = document.getElementById('loader-txt'); if(t) t.textContent = txt; }
-}
-
-// ═══ STRAVA API ═══
-async function loadActivities() {
-  try {
-    setLoader(true, 'Chargement des activités Strava...');
-    ST.activities = await fetchAll();
-    setLoader(false);
-    adaptPlanToStrava();
-    renderAll();
-  } catch(e) {
-    setLoader(false);
-    console.error('Strava error:', e);
-  }
-}
-
-async function fetchAll() {
-  let page = 1, all = [];
-  while(true) {
-    const b = await stravaApi('/athlete/activities', {per_page:100, page});
-    if(!Array.isArray(b)||!b.length) break;
-    all = all.concat(b);
-    if(b.length < 100 || page >= 10) break;
-    page++;
-  }
-  return all;
-}
-
-async function stravaApi(path, params={}) {
-  const url = new URL('/api/strava', location.origin);
-  url.searchParams.set('path', path);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
-  const res = await fetch(url);
-  if (res.status === 401) { location.href = '/'; throw new Error('Session expirée'); }
-  return res.json();
-}
-
-async function refreshStrava() {
-  ST.countdown = SYNC_INTERVAL;
-  await loadActivities();
-}
-
-function adaptPlanToStrava() {
-  if(!ST.plan||!ST.activities.length) return;
-  const startDate = new Date(ST.plan.goal?.startStr || ST.plan.weeks?.[0]?.weekStart || '2026-01-01');
-  const runs = ST.activities.filter(a => {
-    const d = new Date(a.start_date);
-    return d >= startDate && (a.type==='Run'||a.type==='VirtualRun');
-  });
-  ST.plan.weeks.forEach((week, wi) => {
-    const wStart = new Date(week.weekStart);
-    week.sessions.forEach((sess, si) => {
-      if(sess.completed) return;
-      const sDate = new Date(wStart); sDate.setDate(wStart.getDate() + (sess.dayOffset||0)); sDate.setHours(0,0,0,0);
-      const match = runs.find(a => { const ad = new Date(a.start_date); ad.setHours(0,0,0,0); return Math.abs(ad-sDate) <= 86400000; });
-      if(match && match.distance > 2000) {
-        ST.plan.weeks[wi].sessions[si].completed = true;
-        ST.plan.weeks[wi].sessions[si].stravaDistKm = +(match.distance/1000).toFixed(1);
-      }
-    });
-  });
-  savePlanToStorage();
-}
-
-
-// ═══ PLAN STORAGE ═══
-function savePlanToStorage(){ try{ localStorage.setItem('training_plan', JSON.stringify(ST.plan)); }catch(e){} }
-
-function loadPlanFromStorage(){
-  try {
-    const raw = localStorage.getItem('training_plan');
-    if(raw) {
-      ST.plan = JSON.parse(raw);
-      if(ST.plan) {
-        const setup = document.getElementById('goal-setup');
-        const disp  = document.getElementById('plan-display');
-        if(setup) setup.style.display = 'none';
-        if(disp)  disp.style.display  = 'block';
-        renderPlan();
-      }
-    }
-  } catch(e) { console.warn('loadPlanFromStorage:', e); }
-}
-
-function resetPlan(){
-  if(!confirm('Supprimer le plan et recommencer ?')) return;
-  ST.plan = null;
-  localStorage.removeItem('training_plan');
-  const setup = document.getElementById('goal-setup');
-  const disp  = document.getElementById('plan-display');
-  const wks   = document.getElementById('plan-weeks');
-  if(setup) setup.style.display = 'block';
-  if(disp)  disp.style.display  = 'none';
-  if(wks)   wks.innerHTML = '';
-}
-
-function toggleSetup(){
-  const el = document.getElementById('goal-setup');
-  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-// ═══ DASH ═══
-function renderDash(){
-  if(!ST.plan) {
-    const ng = document.getElementById('dash-no-goal');
-    const dc = document.getElementById('dash-content');
-    if(ng) ng.style.display = 'block';
-    if(dc) dc.style.display = 'none';
-    return;
-  }
-  const ng = document.getElementById('dash-no-goal');
-  const dc = document.getElementById('dash-content');
-  if(ng) ng.style.display = 'none';
-  if(dc) dc.style.display = 'block';
-  try { updateScoreRing(); } catch(e){ console.warn('updateScoreRing:', e); }
-  try { renderDashProgress(); } catch(e){ console.warn('renderDashProgress:', e); }
-  try { renderUpcoming(); } catch(e){ console.warn('renderUpcoming:', e); }
-  try { renderComplianceChart(); } catch(e){ console.warn('renderComplianceChart:', e); }
-}
-
-
-
-
-
-// ═══ PREDICTION & SCORE HELPERS ═══
-// ═══ DASH HELPERS ═══
-
-function renderDashProgress(){
-  if(!ST.plan) return;
-  const {goal, weeks} = ST.plan;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const raceDate = new Date(goal.dateStr);
-  const daysLeft = Math.max(0, Math.ceil((raceDate - today) / 86400000));
-  const totalSess = weeks.reduce((s,w)=>s+w.sessions.length, 0);
-  const doneSess  = weeks.reduce((s,w)=>s+w.sessions.filter(se=>se.completed).length, 0);
-  const totalKm   = weeks.reduce((s,w)=>s+(w.kmTarget||0), 0);
-  const doneKm    = weeks.reduce((s,w)=>s+w.sessions.filter(se=>se.completed).reduce((a,se)=>a+(se.stravaDistKm||se.distKm||0),0), 0);
-  const pS = totalSess > 0 ? doneSess/totalSess : 0;
-  const pK = totalKm > 0 ? Math.min(doneKm/totalKm, 1) : 0;
-  const el = document.getElementById('dash-progress');
-  if(!el) return;
-  el.innerHTML = `
-    <div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-        <span style="color:var(--tx2)">Séances réalisées</span>
-        <span style="font-weight:700">${doneSess} / ${totalSess}</span>
-      </div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(pS*100)}%;background:var(--or)"></div></div>
-    </div>
-    <div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-        <span style="color:var(--tx2)">Kilomètres accumulés</span>
-        <span style="font-weight:700">${Math.round(doneKm)} / ${Math.round(totalKm)} km</span>
-      </div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(pK*100)}%;background:var(--bl)"></div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div style="text-align:center;padding:12px;background:var(--or-l);border:1px solid var(--or-m);border-radius:8px">
-        <div style="font-size:26px;font-weight:800;color:var(--or)">${daysLeft}</div>
-        <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">jours restants</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:8px">
-        <div style="font-size:26px;font-weight:800;color:var(--tx)">${Math.ceil(daysLeft/7)}</div>
-        <div style="font-size:9px;color:var(--tx2);font-weight:500;margin-top:2px">semaines</div>
-      </div>
-    </div>
-    <div style="margin-top:10px;padding:11px;background:var(--or-l);border:2px solid var(--or-m);border-radius:8px;text-align:center">
-      <div style="font-size:8px;color:var(--tx2);margin-bottom:2px;font-weight:500">Objectif</div>
-      <div style="font-size:14px;font-weight:800;color:var(--or)">${goal.label||'Marathon'} · ${goal.dateStr||'—'}${goal.time?' · '+goal.time:''}</div>
-    </div>`;
-}
-
-function renderComplianceChart(){
-  if(!ST.plan) return;
-  const {weeks} = ST.plan;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const past = weeks.filter(w => today > new Date(new Date(w.weekStart).getTime()+6*86400000)).slice(-8);
-  if(!past.length) return;
-  const labels  = past.map(w=>`S${w.num}`);
-  const planned = past.map(w=>w.kmTarget||0);
-  const done    = past.map(w=>w.sessions.filter(s=>s.completed).reduce((a,s)=>a+(s.stravaDistKm||s.distKm||0),0));
-  if(ST.charts.comp) ST.charts.comp.destroy();
-  const ctx = document.getElementById('c-comp');
-  if(!ctx) return;
-  ST.charts.comp = new Chart(ctx,{type:'bar',data:{
-    labels,
-    datasets:[
-      {label:'Planifié',data:planned,backgroundColor:'#e8e8e8',borderColor:'#d0d0d0',borderWidth:1,borderRadius:4},
-      {label:'Réalisé', data:done,  backgroundColor:'rgba(252,76,2,.18)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}
-    ]
-  },options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},
-      tooltip:{backgroundColor:'#fff',borderColor:'#e8e8e8',borderWidth:1,titleColor:'#6b6b6b',bodyColor:'#1a1a1a',callbacks:{label:c=>` ${c.parsed.y} km`}}},
-    scales:{
-      x:{ticks:{color:'#a0a0a0',font:{size:10}},grid:{color:'#f0f0f0'}},
-      y:{ticks:{color:'#a0a0a0',font:{size:10},callback:v=>v+'km'},grid:{color:'#f0f0f0'}}
-    }
-  }});
-}
-
-// ═══ SYNC COUNTDOWN ═══
-let SYNC_INTERVAL = 300;
-function startSyncCountdown() {
-  clearInterval(ST.syncTimer);
-  ST.countdown = SYNC_INTERVAL;
-  tickSync();
-  ST.syncTimer = setInterval(() => {
-    ST.countdown--;
-    tickSync();
-    if(ST.countdown <= 0) { ST.countdown = SYNC_INTERVAL; loadActivities(); }
-  }, 1000);
-}
-function tickSync() {
-  const m = Math.floor(ST.countdown/60), s = ST.countdown%60;
-  const el = document.getElementById('countdown-txt');
-  if(el) el.textContent = `Sync dans ${m>0?m+'m ':''}${String(s).padStart(2,'0')}s`;
-}
-
-// ═══ ATHLETE ═══
-function setAthlete(a) {
-  if(!a) return;
-  const n = document.getElementById('hdr-name');
-  const av = document.getElementById('hdr-avatar');
-  const fb = document.getElementById('hdr-avatar-fallback');
-  if(n) n.textContent = `${a.firstname||''} ${a.lastname||''}`.trim() || 'Athlète';
-  if(av && a.profile) {
-    av.src = a.profile;
-    av.style.display = 'block';
-    if(fb) fb.style.display = 'none';
-  } else if(fb && a.firstname) {
-    fb.textContent = a.firstname[0].toUpperCase();
-  }
-  ST.athlete = a;
-}
-
-// ═══ COUNTDOWN (race date) ═══
 // ═══ PREDICTION MODELS ═══
 const REFS = { '10k':{ timeMin:47 }, semi:{ timeMin:105.5 } };
 
@@ -1067,7 +807,14 @@ const upcoming=[
   {today:false,day:'Dim',num:9,month:'mar',type:'long',name:'Sortie longue 28 km',dist:'28 km',dur:'3h03',notes:'La sortie clé de toute la prépa !'},
 ];
 
-// perfRuns: remplacé par ST.activities (données Strava réelles)
+const perfRuns=[
+  {date:'24 fév',name:'Endurance Z2 matin',type:'Run',dist:'11.2',dur:'1h07',pace:"5'59",hr:'138',elev:'45'},
+  {date:'22 fév',name:'Fractionné 1000m',type:'Run',dist:'12.1',dur:'55min',pace:"4'33",hr:'168',elev:'32'},
+  {date:'20 fév',name:'Tempo allure semi',type:'Run',dist:'14.0',dur:'1h14',pace:"5'17",hr:'162',elev:'55'},
+  {date:'17 fév',name:'Sortie longue 24km',type:'Run',dist:'24.1',dur:'2h36',pace:"6'28",hr:'152',elev:'210'},
+  {date:'14 fév',name:'Endurance fondamentale',type:'Run',dist:'10.8',dur:'1h05',pace:"6'01",hr:'140',elev:'38'},
+  {date:'12 fév',name:'Côtes 200m',type:'Run',dist:'9.5',dur:'50min',pace:"5'16",hr:'172',elev:'280'},
+];
 
 // ═══ RENDER PLAN ═══
 function renderPlan(){
@@ -1222,31 +969,12 @@ function renderUpcoming() {
 
 // ═══ PERF TABLE ═══
 function renderPerfTable(){
-  // Filtrer les activités de course depuis le début de la prépa
-  const startDate = ST.plan ? new Date(ST.plan.goal?.startStr || ST.plan.weeks?.[0]?.weekStart || '2000-01-01') : new Date('2000-01-01');
-  const runs = ST.activities
-    .filter(a => { const d=new Date(a.start_date); return d>=startDate&&(a.type==='Run'||a.type==='VirtualRun'); })
-    .sort((a,b)=>new Date(b.start_date)-new Date(a.start_date))
-    .slice(0,50);
-
-  if(!runs.length) {
-    document.getElementById('perf-tbody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx3)">Aucune activité Strava depuis le début de la préparation.</td></tr>`;
-    return;
-  }
-
-  document.getElementById('perf-tbody').innerHTML=runs.map(a=>{
-    const d=new Date(a.start_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
-    const dist=a.distance?(a.distance/1000).toFixed(1):'—';
-    const du=a.moving_time?dur(a.moving_time):'—';
-    const pa=a.distance&&a.moving_time?pace(a.moving_time,a.distance):'—';
-    const hr=a.average_heartrate?Math.round(a.average_heartrate)+' bpm':'—';
-    const el=a.total_elevation_gain?Math.round(a.total_elevation_gain)+' m':'—';
-    return`<tr><td class="td-m">${d}</td><td style="font-weight:500">${esc(a.name)}</td>
-    <td><span class="tdbadge">${a.sport_type||a.type}</span></td>
-    <td style="font-size:14px;font-weight:700">${dist}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
-    <td class="td-m">${du}</td><td class="td-m">${pa}</td>
-    <td class="td-m">${hr}</td><td class="td-m">${el}</td></tr>`;
-  }).join('');
+  document.getElementById('perf-tbody').innerHTML=perfRuns.map(r=>`
+    <tr><td class="td-m">${r.date}</td><td style="font-weight:500">${r.name}</td>
+    <td><span class="tdbadge">${r.type}</span></td>
+    <td style="font-size:14px;font-weight:700">${r.dist}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
+    <td class="td-m">${r.dur}</td><td class="td-m">${r.pace}/km</td>
+    <td class="td-m">${r.hr} bpm</td><td class="td-m">${r.elev} m</td></tr>`).join('');
 }
 
 // ═══ OBJECTIVE EDIT ═══
@@ -1291,127 +1019,384 @@ function closeModal(){document.getElementById('modal').classList.remove('open');
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
 // ═══ INIT ═══
-// ═══ INIT ═══
-function renderAll() {
-  adaptPlanToStrava();
-  if(document.getElementById('tab-perf')?.classList.contains('on')) renderPerf();
-  if(document.getElementById('tab-dash')?.classList.contains('on')) renderDash();
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  // Boot en premier — affiche loader, vérifie auth, charge Strava
-  boot().then(() => {
-    // Après auth réussie : initialiser UI statiques
-    try {
-      const hrRest = loadHRRest();
-      const hrInp = document.getElementById('hrrest-input');
-      if(hrInp) hrInp.value = hrRest;
-      loadPlanFromStorage();
-      renderObjGrid();
-      try { initCTLDisplay(); } catch(e) { console.warn('initCTLDisplay:', e); }
-      try { updateVO2(hrRest); } catch(e) { console.warn('updateVO2:', e); }
-    } catch(e) { console.warn('UI init error:', e); }
-  }).catch(e => console.error('Boot failed:', e));
-});
-
-// ═══ UTILS ═══
-function dur(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h>0?`${h}h${String(m).padStart(2,'0')}`:`${m} min`}
-function pace(sec,m){const spk=(sec/m)*1000;return`${Math.floor(spk/60)}'${String(Math.round(spk%60)).padStart(2,'0')}/km`}
-function weekKey(d){const dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()+3-(dt.getDay()+6)%7);const w1=new Date(dt.getFullYear(),0,4);const wn=1+Math.round(((dt-w1)/86400000-3+(w1.getDay()+6)%7)/7);return`${dt.getFullYear()}-W${String(wn).padStart(2,'0')}`}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
-function fmtD(d){return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}
-
-// ═══ IMPORT / EXPORT PLAN ═══
-function triggerImport(){
-  let inp = document.getElementById('import-json-input');
-  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.id='import-json-input';inp.style.display='none';inp.onchange=e=>importPlanFromFile(e.target);document.body.appendChild(inp);}
-  inp.value='';inp.click();
-}
-
-function importPlanFromFile(input) {
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if(!data.weeks||!Array.isArray(data.weeks)||!data.weeks.length) { alert('Fichier invalide : structure JSON incorrecte.'); return; }
-      if(!data.goal) { alert('Fichier invalide : champ "goal" manquant.'); return; }
-      data.weeks.forEach(w => {
-        w.sessions = (w.sessions||[]).map(s => ({...s, completed:s.completed||false, dayOffset:s.dayOffset??0}));
-      });
-      ST.plan = data;
-      savePlanToStorage();
-      // Mettre à jour les champs objectif
-      const g = data.goal;
-      const sv = (id,v)=>{ const el=document.getElementById(id); if(el&&v!==undefined) el.value=v; };
-      sv('goal-type',    g.type);
-      sv('goal-date',    g.dateStr);
-      sv('prep-start',   g.startStr||data.weeks[0]?.weekStart||'');
-      sv('goal-time',    g.time);
-      sv('goal-level',   (g.level||'intermediaire').replace('_reprise',''));
-      sv('goal-sessions',String(g.nSessions||4));
-      // Mettre à jour le countdown avec la date de course
-      if(g.dateStr) updateRaceDate(g.dateStr);
-      document.getElementById('goal-setup').style.display='none';
-      document.getElementById('plan-display').style.display='block';
-      renderPlan(); renderDash(); renderPerf();
-      const nW=data.weeks.length, nS=data.weeks.reduce((s,w)=>s+w.sessions.length,0);
-      alert(`✅ Plan importé !\n\n📍 ${g.label||'Marathon'}\n🗓 ${g.dateStr||'—'} · Objectif ${g.time||'—'}\n📋 ${nW} semaines · ${nS} séances`);
-    } catch(err) { alert('Erreur JSON : '+err.message); }
-  };
-  reader.readAsText(file);
-}
-
-function exportPlan() {
-  if(!ST.plan){alert('Aucun plan à exporter.');return;}
-  const blob=new Blob([JSON.stringify(ST.plan,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`plan_${ST.plan.goal?.dateStr||'export'}.json`;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-}
-
-function updateRaceDate(dateStr) {
-  // Mettre à jour RACE_DATE et le label du countdown
-  try {
-    const d = new Date(dateStr+'T08:00:00');
-    if(!isNaN(d)) { window.RACE_DATE = d; }
-    const label = ST.plan?.goal?.label || 'Course';
-    const banner = document.getElementById('countdown-banner');
-    if(banner) {
-      const span = banner.querySelector('.cd-event-label');
-      if(span) span.textContent = label + ' dans';
-    }
-  } catch {}
-}
-
-// Mettre à jour les stats de perf depuis les données Strava réelles
-function renderPerfStats() {
-  const startDate = ST.plan ? new Date(ST.plan.goal?.startStr||ST.plan.weeks?.[0]?.weekStart||'2000-01-01') : new Date('2000-01-01');
-  const runs = ST.activities.filter(a=>{const d=new Date(a.start_date);return d>=startDate&&(a.type==='Run'||a.type==='VirtualRun');});
-  const totKm   = runs.reduce((s,a)=>s+(a.distance||0),0)/1000;
-  const totSec  = runs.reduce((s,a)=>s+(a.moving_time||0),0);
-  const totElev = runs.reduce((s,a)=>s+(a.total_elevation_gain||0),0);
-  const hrRuns  = runs.filter(a=>a.average_heartrate>0);
-  const avgHr   = hrRuns.length?hrRuns.reduce((s,a)=>s+a.average_heartrate,0)/hrRuns.length:0;
-  const el = document.getElementById('perf-stats');
-  if(!el) return;
-  el.innerHTML=`
-    <div class="sc"><div class="sl">Sorties</div><div class="sv">${runs.length}</div><div class="ss">depuis début prépa</div></div>
-    <div class="sc"><div class="sl">Distance</div><div class="sv">${Math.round(totKm)}<span class="su">km</span></div></div>
-    <div class="sc"><div class="sl">Temps total</div><div class="sv" style="font-size:20px">${dur(totSec)}</div></div>
-    <div class="sc"><div class="sl">Dénivelé +</div><div class="sv">${Math.round(totElev)}<span class="su" style="font-size:11px">m</span></div></div>
-    <div class="sc"><div class="sl">FC moy.</div><div class="sv">${avgHr?Math.round(avgHr)+'<span class="su">bpm</span>':'—'}</div></div>`;
-}
-
-function renderPerf() {
-  renderPerfStats();
+window.addEventListener('DOMContentLoaded',()=>{
+  // Charger FC repos depuis localStorage
+  const hrRest=loadHRRest();
+  document.getElementById('hrrest-input').value=hrRest;
+  renderObjGrid();
+  renderPlan();
+  renderUpcoming();
   renderPerfTable();
   initPredDisplay();
   initCTLDisplay();
-  updateVO2(loadHRRest());
-}
+  initCharts();
+  updateVO2(hrRest);
+});
+</script>
+</div><!-- /app-content -->
 
+<script>
+// ════════════════════════════════════════════════
+// COUCHE STRAVA — connecte l'app au backend
+// ════════════════════════════════════════════════
+(function() {
+  const API_BASE = '';
+  let stravaActivities = [];
+  let athleteData = null;
+
+  // ─── AUTH CHECK ────────────────────────────
+  async function checkAuth() {
+    const params = new URLSearchParams(location.search);
+    const err = params.get('error');
+    if (err) {
+      history.replaceState({}, '', '/');
+      const msg = {access_denied:'Accès refusé.',token_exchange:'Erreur de connexion.',server_error:'Erreur serveur.'}[err] || 'Erreur inattendue.';
+      const el = document.getElementById('login-error');
+      if(el){ el.textContent = msg; el.style.display = 'block'; }
+    }
+
+    let me;
+    try {
+      const res = await fetch('/api/me');
+      me = await res.json();
+    } catch(e) {
+      console.error('Auth check failed:', e);
+      showLogin(); return false;
+    }
+
+    if(!me || !me.authenticated) { showLogin(); return false; }
+
+    athleteData = me.athlete;
+    showApp();
+    setHeaderAthlete(me.athlete);
+    return true;
+  }
+
+  function showLogin() {
+    document.getElementById('app-loader').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-content').style.display = 'none';
+  }
+
+  function showApp() {
+    document.getElementById('app-loader').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+  }
+
+  function setHeaderAthlete(a) {
+    if(!a) return;
+    // Modifier le nom et l'avatar dans le header
+    const nameEls = document.querySelectorAll('.hdr-name');
+    nameEls.forEach(el => {
+      el.textContent = `${a.firstname||''} ${a.lastname||''}`.trim() || 'Athlète';
+    });
+    // Avatar : remplacer le contenu du div.av
+    const avs = document.querySelectorAll('.av');
+    avs.forEach(av => {
+      if(a.profile) {
+        av.innerHTML = `<img src="${a.profile}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
+      } else if(a.firstname) {
+        av.textContent = a.firstname[0].toUpperCase();
+      }
+    });
+  }
+
+  // ─── STRAVA API ────────────────────────────
+  async function stravaApi(path, params={}) {
+    const url = new URL('/api/strava', location.origin);
+    url.searchParams.set('path', path);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+    const res = await fetch(url);
+    if(res.status === 401) { location.href = '/'; throw new Error('Session expirée'); }
+    return res.json();
+  }
+
+  async function loadActivities() {
+    let page = 1, all = [];
+    while(true) {
+      const b = await stravaApi('/athlete/activities', {per_page:100, page});
+      if(!Array.isArray(b) || !b.length) break;
+      all = all.concat(b);
+      if(b.length < 100 || page >= 10) break;
+      page++;
+    }
+    stravaActivities = all;
+    return all;
+  }
+
+  // ─── INTÉGRATION DANS L'APP ───────────────
+  // Remplacer les données fictives par les vraies données Strava
+  function injectStravaData() {
+    // Mettre à jour les stats globales (perf-stats)
+    const startDate = new Date(); startDate.setMonth(startDate.getMonth() - 6);
+    const runs = stravaActivities.filter(a => {
+      const d = new Date(a.start_date);
+      return d >= startDate && (a.type==='Run' || a.type==='VirtualRun');
+    });
+
+    if(runs.length === 0) return;
+
+    const totKm   = runs.reduce((s,a)=>s+(a.distance||0),0)/1000;
+    const totSec  = runs.reduce((s,a)=>s+(a.moving_time||0),0);
+    const totElev = runs.reduce((s,a)=>s+(a.total_elevation_gain||0),0);
+    const hrRuns  = runs.filter(a=>a.average_heartrate>0);
+    const avgHr   = hrRuns.length ? hrRuns.reduce((s,a)=>s+a.average_heartrate,0)/hrRuns.length : 0;
+
+    // Mettre à jour les sc dans #perf-stats
+    const statsRow = document.querySelector('#tab-perf .stats-row');
+    if(statsRow) {
+      statsRow.innerHTML = `
+        <div class="sc"><div class="sl">Sorties</div><div class="sv">${runs.length}</div><div class="ss">6 derniers mois</div></div>
+        <div class="sc"><div class="sl">Distance</div><div class="sv">${Math.round(totKm)}<span class="su">km</span></div></div>
+        <div class="sc"><div class="sl">Temps total</div><div class="sv" style="font-size:20px">${fmtDur(totSec)}</div></div>
+        <div class="sc"><div class="sl">Dénivelé +</div><div class="sv">${Math.round(totElev)}<span class="su" style="font-size:11px">m</span></div></div>
+        <div class="sc"><div class="sl">FC moy.</div><div class="sv">${avgHr?Math.round(avgHr)+'<span class="su">bpm</span>':'—'}</div></div>`;
+    }
+
+    // Mettre à jour la table d'activités
+    const tbody = document.getElementById('perf-tbody');
+    if(tbody) {
+      const rows = runs.slice(0, 50).map(a => {
+        const d = new Date(a.start_date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+        const dist = (a.distance/1000).toFixed(1);
+        const du = fmtDur(a.moving_time);
+        const pa = fmtPaceFromSec(a.moving_time, a.distance);
+        const hr = a.average_heartrate ? Math.round(a.average_heartrate)+' bpm' : '—';
+        const el = a.total_elevation_gain ? Math.round(a.total_elevation_gain)+' m' : '—';
+        return `<tr>
+          <td class="td-m">${d}</td>
+          <td style="font-weight:500">${escHtml(a.name)}</td>
+          <td><span class="tdbadge">${a.sport_type||a.type}</span></td>
+          <td style="font-size:14px;font-weight:700">${dist}<span style="color:var(--tx2);font-size:10px;margin-left:2px">km</span></td>
+          <td class="td-m">${du}</td>
+          <td class="td-m">${pa}</td>
+          <td class="td-m">${hr}</td>
+          <td class="td-m">${el}</td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx3)">Aucune course Strava sur les 6 derniers mois.</td></tr>';
+    }
+  }
+
+  function fmtDur(sec) {
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+    return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
+  }
+  function fmtPaceFromSec(sec, m) {
+    if(!m||!sec) return '—';
+    const spk = (sec/m)*1000;
+    return `${Math.floor(spk/60)}'${String(Math.round(spk%60)).padStart(2,'0')}/km`;
+  }
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ─── IMPORT/EXPORT PLAN ─────────────────
+  function triggerImport() {
+    let inp = document.getElementById('import-json-hidden');
+    if(!inp) {
+      inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.json'; inp.id = 'import-json-hidden';
+      inp.style.display = 'none';
+      inp.onchange = handleImport;
+      document.body.appendChild(inp);
+    }
+    inp.value = ''; inp.click();
+  }
+
+  function handleImport(e) {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if(!data.weeks || !Array.isArray(data.weeks) || !data.weeks.length) {
+          alert('Fichier invalide : pas de semaines.'); return;
+        }
+        if(!data.goal) { alert('Fichier invalide : objectif manquant.'); return; }
+
+        // Stocker dans localStorage
+        try { localStorage.setItem('imported_plan', JSON.stringify(data)); } catch(e) {}
+
+        // Mettre à jour l'app : remplacer les weeks et goal globaux
+        if(typeof weeks !== 'undefined' && Array.isArray(weeks)) {
+          weeks.length = 0;
+          data.weeks.forEach(w => weeks.push({
+            num: w.num,
+            dates: formatDateRange(w.weekStart),
+            phase: w.phaseLabel || w.phase,
+            status: 'future',
+            km: w.kmTarget,
+            sessions: (w.sessions||[]).map(s => ({
+              day: dayLabelFromOffset(w.weekStart, s.dayOffset),
+              dayOffset: s.dayOffset || 0,
+              type: mapTypeToCode(s.type),
+              name: s.name,
+              dist: String(s.distKm || ''),
+              dur: s.durationMin || 0,
+              target: s.targetPace || '—',
+              desc: s.description || '',
+              watch: s.watch || '',
+              done: s.completed || false,
+            }))
+          }));
+          // Marquer les semaines passées/courantes
+          markWeekStatus();
+          if(typeof renderPlan === 'function') renderPlan();
+          if(typeof renderUpcoming === 'function') renderUpcoming();
+        }
+
+        const nW = data.weeks.length;
+        const nS = data.weeks.reduce((s,w)=>s+(w.sessions||[]).length, 0);
+        alert(`✅ Plan importé !\n${data.goal.label||'Marathon'}\n${data.goal.dateStr||''} · Objectif ${data.goal.time||''}\n${nW} semaines · ${nS} séances`);
+
+      } catch(err) {
+        alert('Erreur lecture JSON : ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function exportPlan() {
+    if(typeof weeks === 'undefined' || !weeks.length) { alert('Aucun plan à exporter.'); return; }
+    const data = { goal: {label:'Plan exporté'}, weeks };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'plan_export.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function formatDateRange(weekStartStr) {
+    if(!weekStartStr) return '';
+    const start = new Date(weekStartStr);
+    const end = new Date(start); end.setDate(start.getDate()+6);
+    const opts = {day:'2-digit', month:'short'};
+    return `${start.toLocaleDateString('fr-FR',opts)} – ${end.toLocaleDateString('fr-FR',opts)}`;
+  }
+
+  function dayLabelFromOffset(weekStartStr, offset) {
+    const start = new Date(weekStartStr || Date.now());
+    const d = new Date(start); d.setDate(start.getDate() + (offset||0));
+    const days = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+    return `${days[d.getDay()]} ${d.getDate()}`;
+  }
+
+  function mapTypeToCode(t) {
+    const map = {easy:'easy', tempo:'tempo', frac:'frac', long:'long', recup:'recup', race:'race'};
+    return map[t] || 'easy';
+  }
+
+  function markWeekStatus() {
+    if(typeof weeks === 'undefined') return;
+    const today = new Date(); today.setHours(0,0,0,0);
+    weeks.forEach((w, i) => {
+      const ws = w.sessions[0]?.dayOffset !== undefined ? null : null;
+      // Trouver weekStart à partir du JSON original (passé via dates ou recalcul)
+      // Simplification : utiliser num pour status
+      // Status sera ré-évalué en fonction de la date courante
+    });
+    // Marquer la semaine en cours = celle qui contient aujourd'hui
+    // On trouve via les dates string si possible — laissé simple pour l'instant
+  }
+
+  // Remplacer la date de course depuis le JSON importé
+  function updateRaceFromImport(data) {
+    if(data.goal && data.goal.dateStr) {
+      try {
+        window.RACE_DATE = new Date(data.goal.dateStr + 'T08:00:00');
+        // Mettre à jour le label dans le bandeau
+        const span = document.querySelector('.cd-event-label');
+        if(span && data.goal.label) {
+          span.textContent = data.goal.label + ' dans';
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Charger le plan depuis localStorage au boot
+  function loadStoredPlan() {
+    try {
+      const raw = localStorage.getItem('imported_plan');
+      if(raw) {
+        const data = JSON.parse(raw);
+        // Simuler un import silencieux
+        const fakeEvent = { target: { files: [{ name:'stored.json' }] } };
+        // Plus simple : appliquer directement
+        if(data.weeks && typeof weeks !== 'undefined') {
+          weeks.length = 0;
+          data.weeks.forEach(w => weeks.push({
+            num: w.num,
+            dates: formatDateRange(w.weekStart),
+            phase: w.phaseLabel || w.phase,
+            status: 'future',
+            km: w.kmTarget,
+            sessions: (w.sessions||[]).map(s => ({
+              day: dayLabelFromOffset(w.weekStart, s.dayOffset),
+              dayOffset: s.dayOffset || 0,
+              type: mapTypeToCode(s.type),
+              name: s.name,
+              dist: String(s.distKm || ''),
+              dur: s.durationMin || 0,
+              target: s.targetPace || '—',
+              desc: s.description || '',
+              watch: s.watch || '',
+              done: s.completed || false,
+            }))
+          }));
+          updateRaceFromImport(data);
+          if(typeof renderPlan === 'function') renderPlan();
+          if(typeof renderUpcoming === 'function') renderUpcoming();
+        }
+      }
+    } catch(e) { console.warn('Stored plan load failed:', e); }
+  }
+
+  // Exposer en global
+  window.triggerImport = triggerImport;
+  window.exportPlan = exportPlan;
+
+  // Ajouter boutons import/export dans la page (zone plan d'entraînement)
+  function addImportButtons() {
+    const target = document.querySelector('.plan-summary');
+    if(!target) return;
+    if(document.getElementById('btn-import-json')) return;
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;gap:8px;margin-left:auto';
+    wrap.innerHTML = `
+      <button id="btn-import-json" class="btn btn-secondary btn-sm" onclick="triggerImport()">📥 Importer JSON</button>
+      <button id="btn-export-json" class="btn btn-secondary btn-sm" onclick="exportPlan()">📤 Exporter</button>
+    `;
+    target.appendChild(wrap);
+  }
+
+  // ─── BOOT ──────────────────────────────────
+  async function bootStrava() {
+    const ok = await checkAuth();
+    if(!ok) return;
+
+    addImportButtons();
+    loadStoredPlan();
+
+    // Charger Strava en arrière-plan
+    try {
+      await loadActivities();
+      injectStravaData();
+    } catch(e) {
+      console.warn('Strava load failed:', e);
+    }
+  }
+
+  // Démarrer après que l'app initiale soit prête
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(bootStrava, 100));
+  } else {
+    setTimeout(bootStrava, 100);
+  }
+})();
 </script>
 </body>
 </html>

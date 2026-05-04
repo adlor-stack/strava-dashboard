@@ -685,8 +685,18 @@ function renderDashProgress() {
   const today = new Date(); today.setHours(0,0,0,0);
   
   // Date de début et de fin depuis le plan
-  const startDate = OBJ.start ? new Date(OBJ.start+'T00:00:00') : (weeks[0]?.weekStart ? new Date(weeks[0].weekStart) : null);
-  const raceDate  = OBJ.date  ? new Date(OBJ.date+'T00:00:00')  : null;
+  const startDate = (function() {
+    var raw = OBJ.start || (weeks[0] && weeks[0].weekStart) || '';
+    if(!raw) return null;
+    var p = raw.split('-');
+    return p.length === 3 ? new Date(+p[0],+p[1]-1,+p[2]) : new Date(raw);
+  })();
+  const raceDate = (function() {
+    var raw = OBJ.date || '';
+    if(!raw) return null;
+    var p = raw.split('-');
+    return p.length === 3 ? new Date(+p[0],+p[1]-1,+p[2]) : new Date(raw);
+  })();
   
   // Jours et semaines restantes
   const daysLeft  = raceDate  ? Math.max(0, Math.ceil((raceDate-today)/86400000))  : null;
@@ -729,15 +739,7 @@ function renderDashProgress() {
   setW('prog-assiduite', pctSess);
 }
 function updateScoreRing(){
-  if(!window.STRAVA_RUNS || !WEEKLY_LOADS.length) {
-    // Pas encore de données — afficher des valeurs neutres
-    const scoreEl = document.getElementById('score-num');
-    if(scoreEl) { scoreEl.textContent='—'; scoreEl.style.color='var(--tx3)'; }
-    ['ind-assiduite','ind-vo2','ind-diff','ind-tsb'].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.textContent='—';
-    });
-    return;
-  }
+  // Toujours s'exécuter — affiche '—' si pas de données
   const hrRest=loadHRRest();
   const vo2=computeVO2(hrRest);
   const vScore=vo2Score(vo2);
@@ -1228,15 +1230,11 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.cu
 window.addEventListener('DOMContentLoaded',()=>{
   // Charger FC repos depuis localStorage
   const hrRest=loadHRRest();
-  document.getElementById('hrrest-input').value=hrRest;
+  const hrInp=document.getElementById('hrrest-input');
+  if(hrInp) hrInp.value=hrRest;
   renderObjGrid();
-  renderPlan();
-  renderUpcoming();
-  renderPerfTable();
-  initPredDisplay();
-  initCTLDisplay();
-  initCharts();
-  updateVO2(hrRest);
+  // Les graphiques et scores sont initialisés par injectStravaData (couche Strava)
+  // pour éviter d'écraser les canvas avant que les données arrivent
 });
 
 function matchSession(sess, weekStartStr) {
@@ -1368,9 +1366,16 @@ async function loadAllActivities() {
 }
 
 function getStartDate() {
-  var raw=(typeof OBJ!=='undefined')?(OBJ.start||''):'';
-  if(raw){var d=new Date(raw);if(!isNaN(d))return d;}
-  var d=new Date();d.setMonth(d.getMonth()-6);return d;
+  var raw = (typeof OBJ !== 'undefined') ? (OBJ.start || '') : '';
+  if(raw) {
+    // Parser en local pour éviter le bug UTC
+    var d = raw.length === 10 
+      ? (function(){ var p=raw.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); })()
+      : new Date(raw);
+    if(!isNaN(d)) return d;
+  }
+  // Fallback : 6 mois avant aujourd'hui
+  var d = new Date(); d.setMonth(d.getMonth()-6); return d;
 }
 
 function weekMonday(dateStr) {
@@ -1750,9 +1755,16 @@ async function loadAllActivities() {
 }
 
 function getStartDate() {
-  var raw = OBJ.start || '';
-  if(raw) { var d=new Date(raw); if(!isNaN(d)) return d; }
-  var d=new Date(); d.setMonth(d.getMonth()-6); return d;
+  var raw = (typeof OBJ !== 'undefined') ? (OBJ.start || '') : '';
+  if(raw) {
+    // Parser en local pour éviter le bug UTC
+    var d = raw.length === 10 
+      ? (function(){ var p=raw.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); })()
+      : new Date(raw);
+    if(!isNaN(d)) return d;
+  }
+  // Fallback : 6 mois avant aujourd'hui
+  var d = new Date(); d.setMonth(d.getMonth()-6); return d;
 }
 
 function weekMonday(dateStr) {

@@ -600,20 +600,22 @@ setInterval(updateCountdown, 1000); updateCountdown();
 var REFS = {}; // peuplé depuis les meilleures activités Strava
 
 function computeREFS(activities) {
-  // Trouver les meilleures performances sur distances proches de 10k et semi
+  // Seules les vraies performances de course sont valides pour Riegel/Cameron/V&V
+  // Critère : vitesse > 4.0 m/s (allure < 4'10/km) → vraie course ou tempo très rapide
+  // ET distance exacte (pas d'extrapolation) : 9.5-10.5km pour 10k, 20-22km pour semi
   var best10k = null, bestSemi = null;
   activities.forEach(function(a) {
     if(!a.distance || !a.moving_time) return;
     var km = a.distance / 1000;
+    var speedMS = a.distance / a.moving_time; // m/s
     var min = a.moving_time / 60;
-    // 10k : entre 8 et 12 km
-    if(km >= 8 && km <= 12) {
-      // Extrapoler au 10k exact via Riegel
+    // 10k réel : distance 9-11km ET vitesse > 3.5 m/s (allure < 4'45/km)
+    if(km >= 9 && km <= 11 && speedMS > 3.5) {
       var t10k = min * Math.pow(10/km, 1.06);
       if(!best10k || t10k < best10k) best10k = t10k;
     }
-    // Semi : entre 18 et 23 km
-    if(km >= 18 && km <= 23) {
+    // Semi réel : distance 20-22km ET vitesse > 3.2 m/s (allure < 5'12/km)
+    if(km >= 20 && km <= 22 && speedMS > 3.2) {
       var tSemi = min * Math.pow(21.1/km, 1.06);
       if(!bestSemi || tSemi < bestSemi) bestSemi = tSemi;
     }
@@ -1334,21 +1336,28 @@ function updatePredDetail(preds) {
   const el = document.getElementById('pred-detail');
   if(!el) return;
   const rows = [
-    {label:'Riegel', val:preds.riegel, stars:'★★★☆☆', note:'Formule vitesse classique'},
-    {label:'Cameron', val:preds.cameron, stars:'★★★☆☆', note:'Variante conservatrice'},
-    {label:'Vickers & Vertosick', val:preds.vv, stars:'★★★★☆', note:'Multi-distances'},
-    {label:'Tanda', val:preds.tanda, stars:'★★★★★', note:'Volume + allure Strava'},
+    {label:'Riegel', val:preds.riegel, stars:'★★★☆☆', note:'Basé sur une vraie course 10k ou semi'},
+    {label:'Cameron', val:preds.cameron, stars:'★★★☆☆', note:'Variante conservatrice de Riegel'},
+    {label:'Vickers & Vertosick', val:preds.vv, stars:'★★★★☆', note:'Nécessite un 10k ET un semi réels'},
+    {label:'Tanda', val:preds.tanda, stars:'★★★★★', note:'Calculé depuis volume + allure Strava'},
   ];
-  el.innerHTML = rows.filter(r=>r.val).map(r=>{
-    const h=Math.floor(r.val/60),m=Math.round(r.val%60);
-    const t=`${h}h${String(m).padStart(2,'0')}`;
-    const diff=Math.round(r.val-TARGET_MIN);
-    const col=diff<=5?'#27ae60':diff>0?'#d97706':'#27ae60';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0f0">
-      <span><strong>${r.label}</strong> <span style="color:#a0a0a0">${r.stars}</span><br><span style="font-size:10px;color:#a0a0a0">${r.note}</span></span>
-      <span style="text-align:right"><strong>${t}</strong><br><span style="color:${col};font-size:10px">${diff>0?'+':''}${diff}min</span></span>
-    </div>`;
-  }).join('') + `<div style="padding-top:6px;font-size:10px;color:#a0a0a0">Consensus = moyenne pondérée des modèles disponibles.</div>`;
+  el.innerHTML = rows.map(r=>{
+    if(r.val) {
+      const h=Math.floor(r.val/60),m=Math.round(r.val%60);
+      const t=h+'h'+String(m).padStart(2,'0');
+      const diff=Math.round(r.val-TARGET_MIN);
+      const col=diff<=5?'#27ae60':diff>0?'#d97706':'#27ae60';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0">'
+        +'<span><strong>'+r.label+'</strong> <span style="color:#a0a0a0">'+r.stars+'</span><br><span style="font-size:10px;color:#a0a0a0">'+r.note+'</span></span>'
+        +'<span style="text-align:right"><strong>'+t+'</strong><br><span style="color:'+col+';font-size:10px">'+(diff>0?'+':'')+diff+'min</span></span>'
+        +'</div>';
+    } else {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;opacity:.5">'
+        +'<span><strong>'+r.label+'</strong> <span style="color:#a0a0a0">'+r.stars+'</span><br><span style="font-size:10px;color:#a0a0a0">'+r.note+'</span></span>'
+        +'<span style="font-size:13px;font-weight:700;color:#a0a0a0">N/A</span>'
+        +'</div>';
+    }
+  }).join('') + '<div style="padding-top:6px;font-size:10px;color:#a0a0a0">Consensus = moyenne des modèles disponibles (N/A exclus).</div>';
 }
 function showTab(id,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
@@ -2132,10 +2141,13 @@ function buildCompData() {
   var planLabels=[], planKm=[], doneKm=[];
   weeks.forEach(function(w){
     if(!w.weekStart) return;
-    var lbl = new Date(w.weekStart).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+    var _wp = w.weekStart.split('-');
+    var _wd = new Date(+_wp[0], +_wp[1]-1, +_wp[2]);
+    var lbl = _wd.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
     planLabels.push(lbl);
     planKm.push(w.km||0);
-    var wStart = new Date(w.weekStart).setHours(0,0,0,0);
+    var _wsp = w.weekStart.split('-');
+    var wStart = new Date(+_wsp[0], +_wsp[1]-1, +_wsp[2]).getTime();
     // Km réalisés uniquement pour les semaines passées ou en cours
     var wkStr = weekMonday(w.weekStart);
     var realized = (wStart <= todayMs && byWeek[wkStr]) ? +byWeek[wkStr].km.toFixed(1) : 0;

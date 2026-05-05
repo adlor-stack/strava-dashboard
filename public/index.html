@@ -900,12 +900,15 @@ const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{disp
 function refreshCompChart() {
   const ctx = document.getElementById('c-comp');
   if(!ctx) return;
+  // Détruire TOUT chart existant sur ce canvas (Chart.js 4.x)
+  const existing = Chart.getChart(ctx);
+  if(existing) { existing.destroy(); }
+  if(window.compChart) { try { window.compChart.destroy(); } catch {} window.compChart = null; }
   const _compData = window.COMP_DATA;
   if(!_compData || !_compData.labels || !_compData.labels.length) {
     ctx.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3);font-size:12px">Importe un plan pour voir le comparatif.</div>';
     return;
   }
-  if(window.compChart) { window.compChart.destroy(); window.compChart = null; }
   window.compChart = new Chart(ctx, {type:'bar', data:{
     labels: _compData.labels,
     datasets:[
@@ -949,6 +952,7 @@ function initCharts(){
     const vo2est = Math.min(75, Math.max(30, speedMperMin * 0.225 + 3.5));
     return +vo2est.toFixed(1);
   });
+  try{const _ec=Chart.getChart(document.getElementById('c-vo2'));if(_ec)_ec.destroy();}catch{}
   new Chart(document.getElementById('c-vo2'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'VO2max',data:vo2Weekly,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',tension:.4,fill:true},{label:'Objectif',data:HISTORY.map(()=>55),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+' ml'}}}}});
 
   // Prédiction hebdo — calculée depuis les données réelles semaine par semaine
@@ -959,12 +963,15 @@ function initCharts(){
     const avgKm   = slice.reduce((s,wk)=>s+wk.km,0) / slice.length;
     return Math.round(tanda(avgPace, avgKm));
   });
+  try{const _ec=Chart.getChart(document.getElementById('c-pred'));if(_ec)_ec.destroy();}catch{}
   new Chart(document.getElementById('c-pred'),{type:'line',data:{labels:HISTORY.map(w=>w.weekDate||w.week),datasets:[{label:'Prédit',data:predWeekly.map(v=>+(v/60).toFixed(3)),borderColor:'#FC4C02',backgroundColor:'rgba(252,76,2,.06)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#FC4C02',tension:.35,fill:true},{label:'Objectif 3h30',data:HISTORY.map(()=>3.5),borderColor:'#27ae60',borderWidth:1.5,borderDash:[5,3],pointRadius:0}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Objectif'))return' Objectif : 3h30'; const v=ctx.parsed.y,h=Math.floor(v),m=Math.round((v-h)*60); return ` Prédit : ${h}h${String(m).padStart(2,'0')}`}}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>{const h=Math.floor(v),m=Math.round((v-h)*60);return`${h}h${String(m).padStart(2,'0')}`}}}}}});
 
   // CTL/ATL/TSB
+  try{const _ec=Chart.getChart(document.getElementById('c-ctl'));if(_ec)_ec.destroy();}catch{}
   new Chart(document.getElementById('c-ctl'),{type:'line',data:{labels:dayLabels,datasets:[{label:'CTL',data:fitnessData.ctl,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.05)',borderWidth:2,pointRadius:0,tension:.4,fill:true},{label:'ATL',data:fitnessData.atl,borderColor:'#e74c3c',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:.4},{label:'TSB',data:fitnessData.tsb,borderColor:'#27ae60',borderWidth:1.5,borderDash:[4,3],pointRadius:0,tension:.4},{label:'0',data:fitnessData.ctl.map(()=>0),borderColor:'rgba(0,0,0,.1)',borderWidth:.5,pointRadius:0,borderDash:[2,4]}]},options:{...chartOpts,scales:{x:{ticks:{color:'#a0a0a0',font:{size:10},maxRotation:0},grid:{color:'#f5f5f5'}},y:{ticks:{color:'#a0a0a0',font:{size:10},callback:v=>Math.round(v)},grid:{color:'#f5f5f5'}}}}});
 
   // Volume
+  try{const _ec=Chart.getChart(document.getElementById('c-vol'));if(_ec)_ec.destroy();}catch{}
   new Chart(document.getElementById('c-vol'),{type:'bar',data:{labels:wkLabels,datasets:[{data:WEEKLY_LOADS,backgroundColor:'rgba(252,76,2,.15)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} km`}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+'km'}}}}});
 
   // Compliance
@@ -1475,6 +1482,8 @@ function sessBadge(status){
 }
 function saveObj(){
   try{localStorage.setItem('plan_obj',JSON.stringify(OBJ));}catch(e){}
+  // Sauvegarder dans KV si disponible
+  if(typeof kvSet==='function') kvSet('plan_obj', OBJ).catch(function(){});
   try{RACE_DATE=new Date(OBJ.date?OBJ.date+'T08:00:00':'2027-10-25T08:00:00');}catch(e){}
   if(typeof updatePlanSummaryDisplay==='function')updatePlanSummaryDisplay();
   objEditing=false;renderObjGrid();

@@ -1912,11 +1912,15 @@ window.addEventListener('load',async function(){
 
 async function kvGet(key) {
   try {
-    const r = await fetch('/api/data?key=' + encodeURIComponent(key));
-    if(!r.ok) throw new Error('api error');
+    const r = await fetch('/api/data?key=' + encodeURIComponent(key), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if(!r.ok) throw new Error('api error ' + r.status);
     const d = await r.json();
     return d.value ?? null;
-  } catch {
+  } catch(e) {
+    console.warn('kvGet fallback localStorage:', e.message);
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
   }
 }

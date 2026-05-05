@@ -1900,6 +1900,55 @@ window.addEventListener('load',async function(){
 
 <script>
 // ══════════════════════════════════════════════
+// PERSISTANCE — Upstash Redis via /api/data
+// ══════════════════════════════════════════════
+
+async function kvGet(key) {
+  try {
+    const r = await fetch('/api/data?key=' + encodeURIComponent(key));
+    if(!r.ok) throw new Error('api error');
+    const d = await r.json();
+    return d.value ?? null;
+  } catch {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+  }
+}
+
+async function kvSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  try {
+    await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+  } catch(e) { console.warn('KV write failed:', e); }
+}
+
+async function loadFromKV() {
+  const [planRaw, objRaw, hrRaw] = await Promise.all([
+    kvGet('imported_plan'),
+    kvGet('plan_obj'),
+    kvGet('hrRest'),
+  ]);
+  if(hrRaw != null) {
+    try { localStorage.setItem('hrRest', hrRaw); } catch {}
+    const inp = document.getElementById('hrrest-input');
+    if(inp) inp.value = hrRaw;
+  }
+  if(objRaw && typeof objRaw === 'object') {
+    Object.assign(OBJ, objRaw);
+    try { localStorage.setItem('plan_obj', JSON.stringify(objRaw)); } catch {}
+  }
+  if(planRaw && planRaw.weeks) {
+    try { localStorage.setItem('imported_plan', JSON.stringify(planRaw)); } catch {}
+    if(typeof applyPlan === 'function') applyPlan(planRaw);
+    return true;
+  }
+  return false;
+}
+
+// ══════════════════════════════════════════════
 // COUCHE STRAVA
 // ══════════════════════════════════════════════
 (function() {
@@ -2099,7 +2148,23 @@ window.triggerImport = function() {
   if(!inp) {
     inp = document.createElement('input');
     inp.type='file'; inp.accept='.json'; inp.id='__import_inp'; inp.style.display='none';
-    inp.onchange = handleImport;
+    inp.onchange = function(e) {
+      var file = e.target.files[0]; if(!file) return;
+      var reader = new FileReader();
+      reader.onload = async function(ev) {
+        try {
+          var data = JSON.parse(ev.target.result);
+          if(!data.weeks||!data.weeks.length){alert('Fichier invalide.');return;}
+          // Sauvegarder dans KV + localStorage
+          await kvSet('imported_plan', data);
+          if(typeof applyPlan==='function') applyPlan(data);
+          if(window.__allActivities&&typeof injectStravaData==='function') injectStravaData(window.__allActivities);
+          var nS=data.weeks.reduce(function(s,w){return s+(w.sessions||[]).length;},0);
+          alert('Plan importé et sauvegardé - '+data.weeks.length+' semaines, '+nS+' séances');
+        } catch(err){alert('Erreur JSON : '+err.message);}
+      };
+      reader.readAsText(file);
+    };
     document.body.appendChild(inp);
   }
   inp.value=''; inp.click();
@@ -2224,14 +2289,21 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(async function(){
     var ok = await checkAuth();
     if(!ok) return;
-    // Charger plan
+    // Charger données depuis KV (avec fallback localStorage)
     try {
-      var raw=localStorage.getItem('imported_plan');
-      if(raw) applyPlan(JSON.parse(raw));
-      else if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
-  if(typeof renderDashProgress==='function') renderDashProgress();
-  if(typeof renderDashProgress==='function') renderDashProgress();
-    } catch(e) {}
+      const hadPlan = await loadFromKV();
+      if(!hadPlan) {
+        if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay();
+        if(typeof renderDashProgress==='function') renderDashProgress();
+      }
+    } catch(e) {
+      // Fallback localStorage pur
+      try {
+        const raw = localStorage.getItem('imported_plan');
+        if(raw) { if(typeof applyPlan==='function') applyPlan(JSON.parse(raw)); }
+        else { if(typeof updatePlanSummaryDisplay==='function') updatePlanSummaryDisplay(); }
+      } catch(e2) {}
+    }
     // Charger Strava
     try {
       var acts = await loadAllActivities();

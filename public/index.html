@@ -222,7 +222,7 @@ tbody td{padding:10px 12px;font-size:12px}
 
 <!-- COUNTDOWN -->
 <div class="countdown-banner" id="countdown-banner">
-  <span class="cd-label">Marathon Paris dans</span>
+  <span class="cd-label" id="cd-event-label">Course dans</span>
   <span id="cd-mo">—</span><span class="cd-label">mois</span>
   <span id="cd-d">—</span><span class="cd-label">j</span>
   <span id="cd-h">—</span><span class="cd-label">h</span>
@@ -351,15 +351,17 @@ tbody td{padding:10px 12px;font-size:12px}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div style="text-align:center;padding:18px;background:var(--or-l);border:2px solid var(--or-m);border-radius:10px">
         <div style="font-size:10px;font-weight:600;color:var(--or);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Prédiction consensus</div>
-        <div style="font-size:40px;font-weight:800;color:var(--or);line-height:1" id="pred-consensus">3h44</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:4px" id="pred-pace">5'19/km</div>
-        <div style="font-size:12px;font-weight:600;margin-top:8px" id="pred-diff">+14min au-dessus de l'objectif</div>
+        <div style="font-size:40px;font-weight:800;color:var(--or);line-height:1" id="pred-consensus">—</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:4px" id="pred-pace">—</div>
+        <div style="font-size:12px;font-weight:600;margin-top:8px" id="pred-diff">—</div>
+        <button onclick="showPredDetail()" style="margin-top:8px;font-size:10px;color:var(--or);background:none;border:1px solid var(--or-m);border-radius:6px;padding:3px 10px;cursor:pointer">Voir le détail ▾</button>
+        <div id="pred-detail" style="display:none;margin-top:12px;text-align:left;font-size:11px;color:var(--tx2);border-top:1px solid var(--or-m);padding-top:10px"></div>
       </div>
       <div style="text-align:center;padding:18px;background:var(--bg);border:1px solid var(--bd);border-radius:10px">
         <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ton objectif</div>
         <div style="font-size:40px;font-weight:800;color:var(--tx);line-height:1">3h30</div>
         <div style="font-size:12px;color:var(--tx2);margin-top:4px">4'58/km</div>
-        <div style="font-size:12px;font-weight:600;color:var(--tx3);margin-top:8px">Marathon Paris · 11/04/2027</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx3);margin-top:8px"><span id="pred-race-label">—</span></div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Évolution de la prédiction semaine par semaine</div>
@@ -436,11 +438,18 @@ tbody td{padding:10px 12px;font-size:12px}
     <div class="card" style="padding:0">
       <div class="card-title" style="padding:18px 18px 0">Indicateur de forme</div>
       <div class="score-wrap">
-        <div class="ring-w">
+        <div class="ring-w" onclick="showScoreDetail()" style="cursor:pointer" title="Cliquer pour le détail">
           <canvas id="c-score"></canvas>
           <div class="ring-center">
-            <div class="ring-num" id="score-num" style="color:var(--or)">68</div>
+            <div class="ring-num" id="score-num" style="color:var(--or)">—</div>
             <div class="ring-lbl">/ 100</div>
+          </div>
+        </div>
+        <div id="score-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+          <div style="background:#fff;border-radius:12px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.15)">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">Détail du score de forme</div>
+            <div id="score-detail-content"></div>
+            <button onclick="document.getElementById('score-detail-modal').style.display='none'" style="margin-top:16px;width:100%;padding:10px;background:#FC4C02;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">Fermer</button>
           </div>
         </div>
         <div style="flex:1">
@@ -780,7 +789,8 @@ function renderDashProgress() {
   const setW = (id,v) => { const el=document.getElementById(id); if(el) el.style.width=v+'%'; };
   
   set('dash-done-sess', doneSess+' / '+totalSess); // total = toutes les séances du plan
-  setW('prog-sess', pctSess);
+  const pctTotal = totalSess > 0 ? Math.round(doneSess/totalSess*100) : 0;
+  setW('prog-sess', pctTotal);
   set('dash-done-km', Math.round(stravaKm)+' / '+Math.round(totalKm)+' km');
   setW('prog-km', pctKm);
   if(document.getElementById('days-left'))  set('days-left',  daysLeft  !== null ? daysLeft  : '—');
@@ -828,7 +838,17 @@ function updateScoreRing(){
   const diffScore=Math.max(0,Math.min(100,100-Math.round(Math.abs(diff)/TARGET_MIN*200)));
   const tsb=lastTSB;
   const tScore=tsbScore(tsb);
-  const globalScore=Math.round(assiduite*.3+vScore*.25+diffScore*.25+tScore*.2);
+  // Score recalibré : 
+  // - assiduite : 0-100 (séances passées réalisées)
+  // - vScore : 0-100 (VO2max / 70)  
+  // - diffScore : 100 si prédit <= objectif, 0 si prédit >= objectif+60min
+  //   progression linéaire entre les deux
+  // - tScore : 0-100 (TSB : -30→0, +15→100)
+  const diffMin = consensus - TARGET_MIN; // positif = au-dessus de l'objectif
+  const diffScoreReal = Math.max(0, Math.min(100, Math.round(100 - (diffMin / 60) * 100)));
+  const tsbVal = lastTSB || 0;
+  const tScoreReal = Math.max(0, Math.min(100, Math.round(((tsbVal + 30) / 45) * 100)));
+  const globalScore = Math.round(assiduite*.25 + vScore*.25 + diffScoreReal*.35 + tScoreReal*.15);
   document.getElementById('score-num').textContent=globalScore;
   const scoreColor=globalScore>=75?var_gr:globalScore>=55?'#d97706':'#e74c3c';
   document.getElementById('score-num').style.color=scoreColor;
@@ -935,6 +955,18 @@ function initCharts(){
 // ═══ PREDICTION DISPLAY ═══
 function initPredDisplay(){
   const consensus=computeConsensus();
+  // Calculer les prédictions individuelles pour le détail
+  const predDetail = { riegel:null, cameron:null, vv:null, tanda:null };
+  if(REFS.semi&&REFS.semi.timeMin){
+    predDetail.riegel=riegel(REFS.semi.timeMin,21.1,MARATHON_KM);
+    predDetail.cameron=cameron(REFS.semi.timeMin,21.1,MARATHON_KM);
+  } else if(REFS['10k']&&REFS['10k'].timeMin){
+    predDetail.riegel=riegel(REFS['10k'].timeMin,10,MARATHON_KM);
+    predDetail.cameron=cameron(REFS['10k'].timeMin,10,MARATHON_KM);
+  }
+  predDetail.vv = vv(REFS);
+  if(HISTORY.length){const tp=HISTORY.reduce((s,w)=>s+w.km,0);const ap=HISTORY.reduce((s,w)=>s+w.pace*w.km,0)/tp;predDetail.tanda=tanda(ap,tp/HISTORY.length);}
+  setTimeout(function(){if(typeof updatePredDetail==='function')updatePredDetail(predDetail);},100);
   const diff=Math.round(consensus-TARGET_MIN);
   const diffStr=(diff>0?'+':'')+diff+'min';
   const color=Math.abs(diff)<=5?var_gr:diff>0?'#d97706':var_gr;
@@ -1026,7 +1058,10 @@ function renderPlan(){
   weeks.forEach((w,wi)=>{
     const sCls=w.status==='done'?'wb-done':w.status==='current'?'wb-cur':'wb-fut';
     const sLbl=w.status==='done'?'✓ Terminé':w.status==='current'?'En cours':'À venir';
-    const done=w.sessions.filter(s=>s.done).length;
+    const done=w.sessions.filter(function(s){ 
+      const st=matchSession(s,w.weekStart); 
+      return st==='validated'||st==='done'||s.done; 
+    }).length;
     const pct=Math.round((done/w.sessions.length)*100);
     const el=document.createElement('div'); el.className='week-block';
     el.innerHTML=`
@@ -1215,6 +1250,62 @@ function cancelObjEdit(){objEditing=false;renderObjGrid();document.getElementByI
 function toggleObjEdit(){if(objEditing)cancelObjEdit();else startObjEdit();}
 
 // ═══ TABS ═══
+
+
+function showScoreDetail() {
+  const modal = document.getElementById('score-detail-modal');
+  if(!modal) return;
+  const el = document.getElementById('score-detail-content');
+  if(!el) return;
+  // Recalculer les composantes
+  const scoreNum = parseInt(document.getElementById('score-num')?.textContent) || 0;
+  const assiduiteEl = document.getElementById('ind-assiduite');
+  const vo2El = document.getElementById('ind-vo2');
+  const diffEl = document.getElementById('ind-diff');
+  const tsbEl  = document.getElementById('ind-tsb');
+  const rows = [
+    {label:'Assiduité (25%)', val:assiduiteEl?.textContent||'—', note:'Séances réalisées / séances passées', color:'#FC4C02'},
+    {label:'VO2max (25%)',    val:vo2El?.textContent||'—',       note:'Estimée depuis FC repos et vitesse Strava', color:'#2563eb'},
+    {label:'Écart prédit/objectif (35%)', val:diffEl?.textContent||'—', note:'Plus tu es proche de 3h30, mieux c&#39;est', color:'#d97706'},
+    {label:'Fraîcheur TSB (15%)', val:tsbEl?.textContent||'—',  note:'CTL - ATL. Positif = frais, négatif = fatigué', color:'#27ae60'},
+  ];
+  el.innerHTML = `<div style="font-size:12px;color:#6b6b6b;margin-bottom:14px">Le score combine 4 indicateurs. Clique sur chaque ligne pour comprendre.</div>` +
+    rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0">
+      <div><div style="font-weight:600;font-size:12px">${r.label}</div><div style="font-size:10px;color:#a0a0a0">${r.note}</div></div>
+      <div style="font-size:18px;font-weight:800;color:${r.color}">${r.val}</div>
+    </div>`).join('') +
+    `<div style="margin-top:12px;padding:10px;background:#f5f5f5;border-radius:8px;font-size:11px;color:#6b6b6b">
+      Score global : ${scoreNum}/100<br>
+      Progression attendue : le score monte au fur et à mesure de la préparation.
+    </div>`;
+  modal.style.display = 'flex';
+}
+function showPredDetail() {
+  const el = document.getElementById('pred-detail');
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function updatePredDetail(preds) {
+  const el = document.getElementById('pred-detail');
+  if(!el) return;
+  const rows = [
+    {label:'Riegel', val:preds.riegel, stars:'★★★☆☆', note:'Formule vitesse classique'},
+    {label:'Cameron', val:preds.cameron, stars:'★★★☆☆', note:'Variante conservatrice'},
+    {label:'Vickers & Vertosick', val:preds.vv, stars:'★★★★☆', note:'Multi-distances'},
+    {label:'Tanda', val:preds.tanda, stars:'★★★★★', note:'Volume + allure Strava'},
+  ];
+  el.innerHTML = rows.filter(r=>r.val).map(r=>{
+    const h=Math.floor(r.val/60),m=Math.round(r.val%60);
+    const t=`${h}h${String(m).padStart(2,'0')}`;
+    const diff=Math.round(r.val-TARGET_MIN);
+    const col=diff<=5?'#27ae60':diff>0?'#d97706':'#27ae60';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0f0">
+      <span><strong>${r.label}</strong> <span style="color:#a0a0a0">${r.stars}</span><br><span style="font-size:10px;color:#a0a0a0">${r.note}</span></span>
+      <span style="text-align:right"><strong>${t}</strong><br><span style="color:${col};font-size:10px">${diff>0?'+':''}${diff}min</span></span>
+    </div>`;
+  }).join('') + `<div style="padding-top:6px;font-size:10px;color:#a0a0a0">Consensus = moyenne pondérée des modèles disponibles.</div>`;
+}
 function showTab(id,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));

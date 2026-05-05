@@ -67,6 +67,8 @@ export default async function handler(req, res) {
     try {
       const value = await kvGet(athleteId, key);
       console.log('[data] GET', key, '→', value !== null ? 'trouvé' : 'null');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
       return res.status(200).json({ key, value });
     } catch (e) {
       console.error('[data] GET error:', e.message);

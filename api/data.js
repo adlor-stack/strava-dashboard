@@ -20,11 +20,11 @@ async function kvGet(athleteId, key) {
   if (!r.ok) throw new Error(`KV GET ${r.status}`);
   const data = await r.json();
   if (data.result === null || data.result === undefined) return null;
-  // Upstash retourne la valeur déjà comme string JSON → parser
+  // Upstash peut retourner string ou objet selon ce qui a été stocké
   if (typeof data.result === 'string') {
     try { return JSON.parse(data.result); } catch { return data.result; }
   }
-  return data.result;
+  return data.result; // déjà objet
 }
 
 async function kvSet(athleteId, key, value) {
@@ -38,7 +38,7 @@ async function kvSet(athleteId, key, value) {
     },
     // Upstash attend le body comme ["SET", "key", "value"] OU via REST direct
     // Format REST direct : body = valeur sérialisée
-    body: JSON.stringify(JSON.stringify(value))
+    body: JSON.stringify(value)  // Upstash stocke la valeur sérialisée
   });
   if (!r.ok) {
     const err = await r.text();

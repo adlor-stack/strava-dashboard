@@ -974,7 +974,7 @@ function initCharts(){
 
   // Compliance
   var _compData=window.COMP_DATA||{labels:wkLabels,planned:WEEKLY_LOADS,done:WEEKLY_LOADS.map(()=>0)};
-  new Chart(document.getElementById('c-comp'),{type:'bar',data:{labels:_compData.labels,datasets:[{label:'Planifié',data:_compData.planned,backgroundColor:'#e8e8e8',borderColor:'#d0d0d0',borderWidth:1,borderRadius:4},{label:'Réalisé',data:_compData.done,backgroundColor:'rgba(252,76,2,.18)',borderColor:'#FC4C02',borderWidth:2,borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true,position:'top',labels:{color:'#6b6b6b',font:{size:10},padding:10,boxWidth:8}},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} km`}}},scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>v+'km'}}}}});
+  // c-comp géré par refreshCompChart()
 
   // Score ring (appelé après)
   updateScoreRing();
@@ -1937,11 +1937,15 @@ async function kvSet(key, value) {
 }
 
 async function loadFromKV() {
+  console.log('[loadFromKV] Chargement depuis KV...');
   const [planRaw, objRaw, hrRaw] = await Promise.all([
     kvGet('imported_plan'),
     kvGet('plan_obj'),
     kvGet('hrRest'),
   ]);
+  console.log('[loadFromKV] planRaw type:', typeof planRaw, '| weeks:', planRaw?.weeks?.length);
+  console.log('[loadFromKV] objRaw:', objRaw);
+  
   if(hrRaw != null) {
     try { localStorage.setItem('hrRest', hrRaw); } catch {}
     const inp = document.getElementById('hrrest-input');
@@ -1951,11 +1955,18 @@ async function loadFromKV() {
     Object.assign(OBJ, objRaw);
     try { localStorage.setItem('plan_obj', JSON.stringify(objRaw)); } catch {}
   }
-  if(planRaw && planRaw.weeks) {
+  if(planRaw && planRaw.weeks && planRaw.weeks.length > 0) {
+    console.log('[loadFromKV] Applying plan with', planRaw.weeks.length, 'weeks');
     try { localStorage.setItem('imported_plan', JSON.stringify(planRaw)); } catch {}
-    if(typeof applyPlan === 'function') applyPlan(planRaw);
+    if(typeof applyPlan === 'function') {
+      applyPlan(planRaw);
+      console.log('[loadFromKV] applyPlan done, weeks.length:', weeks.length);
+    } else {
+      console.error('[loadFromKV] applyPlan not defined!');
+    }
     return true;
   }
+  console.log('[loadFromKV] Pas de plan valide dans KV');
   return false;
 }
 

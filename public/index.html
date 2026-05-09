@@ -180,6 +180,163 @@ tbody td{padding:10px 12px;font-size:12px}
   .sess-hd>*:nth-child(4),.sess-row>*:nth-child(4){display:block}
   .panel{padding:14px}
 }
+
+
+/* ═══════════════════════════════════════════════
+   MOBILE OPTIMISATION — < 768px
+   ═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Header compact */
+  .hdr {
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .hdr .logo-txt { font-size: 13px !important; }
+  .hdr .sep { display: none !important; }
+  .hdr-name { font-size: 11px !important; }
+  .hdr-r { gap: 6px !important; flex-wrap: wrap !important; justify-content: flex-end; }
+  .hdr-btn { padding: 5px 8px !important; font-size: 10px !important; }
+  .pulse-wrap { font-size: 10px !important; }
+  .pulse-wrap span { display: none !important; }
+  .av { width: 26px !important; height: 26px !important; font-size: 11px !important; }
+
+  /* Countdown banner */
+  .cd-banner {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+    text-align: center;
+    justify-content: center !important;
+  }
+  .cd-banner .cd-num { font-size: 16px !important; }
+  .cd-banner .cd-unit { font-size: 9px !important; }
+
+  /* Tabs */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 10px !important;
+  }
+  .tab {
+    padding: 12px 14px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Container/cards */
+  .container, .tab-content { padding: 12px !important; }
+  .card { padding: 14px !important; margin-bottom: 12px !important; border-radius: 10px !important; }
+  .card-title { font-size: 11px !important; margin-bottom: 10px !important; }
+
+  /* Grid 2 colonnes → 1 colonne */
+  .grid-2, .grid-2col, [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stats row : 5 colonnes → 2 colonnes */
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .sc { padding: 10px !important; }
+  .sl { font-size: 9px !important; }
+  .sv { font-size: 18px !important; }
+  .ss { font-size: 9px !important; }
+  .su { font-size: 10px !important; }
+
+  /* Indicateur de forme : ring + ind = vertical */
+  [style*="grid-template-columns:auto 1fr"],
+  [style*="grid-template-columns: auto 1fr"] {
+    grid-template-columns: 1fr !important;
+    text-align: center;
+  }
+  .ring-w { margin: 0 auto 16px !important; max-width: 140px; }
+
+  /* Plan summary bar */
+  .plan-summary {
+    flex-wrap: wrap !important;
+    padding: 10px !important;
+  }
+  .plan-summary > div:first-of-type { font-size: 13px !important; }
+  .plan-summary button { font-size: 10px !important; padding: 6px 10px !important; }
+
+  /* Objectif grid : 6 colonnes → 1 colonne */
+  .obj-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .obj-cell { padding: 10px !important; }
+
+  /* Charts : hauteur réduite */
+  canvas { max-height: 220px !important; }
+  .chart-wrap { height: 220px !important; }
+
+  /* Tables : scroll horizontal */
+  .perf-table-wrap, table { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  table { min-width: 600px; font-size: 11px !important; }
+  table th, table td { padding: 6px 8px !important; }
+  .td-m { font-size: 10px !important; }
+
+  /* Plan / weeks : padding réduit */
+  .week-block { padding: 10px !important; }
+  .sess-row { padding: 8px !important; gap: 6px !important; }
+  .sess-row > div:first-child { min-width: 38px !important; }
+
+  /* Ligne séance : grille 50px 1fr auto → 40px 1fr auto avec gap réduit */
+  [style*="grid-template-columns:50px 1fr auto"],
+  [style*="grid-template-columns: 50px 1fr auto"] {
+    grid-template-columns: 40px 1fr auto !important;
+    gap: 6px !important;
+    padding: 7px 10px !important;
+  }
+
+  /* Modal */
+  .modal-content { padding: 16px !important; max-width: 95vw !important; max-height: 92vh !important; }
+  .modal .field { margin-bottom: 10px !important; }
+  .modal .fg { grid-template-columns: 1fr !important; gap: 8px !important; }
+
+  /* Login screen */
+  #login-screen > div {
+    padding: 32px 24px !important;
+    max-width: 90vw !important;
+  }
+  #login-screen h1 { font-size: 28px !important; }
+
+  /* Boutons généraux */
+  .btn, .btn-primary, .btn-secondary { font-size: 12px !important; padding: 8px 12px !important; }
+  .btn-sm { font-size: 10px !important; padding: 5px 8px !important; }
+
+  /* VO2max card layout */
+  .vo2-card-grid {
+    grid-template-columns: 1fr !important;
+    text-align: center !important;
+  }
+  
+  /* Score detail modal */
+  #score-detail-modal > div { max-width: 95vw !important; padding: 16px !important; }
+
+  /* Footer activités : line-height plus compact */
+  body { font-size: 13px; }
+  
+  /* Edit btn plus large pour le tactile */
+  .edit-btn { padding: 6px 10px !important; min-width: 32px; min-height: 32px; }
+  
+  /* Checkbox plus large pour tactile */
+  .chk { width: 20px !important; height: 20px !important; }
+}
+
+@media (max-width: 480px) {
+  /* Très petits écrans */
+  .container, .tab-content { padding: 10px !important; }
+  .stats-row { grid-template-columns: 1fr 1fr !important; }
+  .ring-w { max-width: 120px !important; }
+  #login-screen h1 { font-size: 24px !important; }
+  .cd-banner .cd-num { font-size: 14px !important; }
+}
 </style>
 </head>
 <body>

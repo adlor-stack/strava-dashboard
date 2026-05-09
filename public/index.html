@@ -797,7 +797,11 @@ function renderDashProgress() {
   const pctSess = sessPassed > 0 ? Math.round(doneSess/sessPassed*100) : 0;
   
   // Km : planifiés (total plan) vs réalisés (Strava depuis début prépa)
-  const totalKm = weeks.reduce((s,w)=>s+(w.km||0), 0);
+  const totalKm = weeks.reduce(function(s,w){
+    var wKm = w.kmTarget || w.km || 0;
+    if(!wKm && w.sessions) wKm = w.sessions.reduce(function(a,se){ return a+parseFloat(se.dist||se.distKm||0); }, 0);
+    return s + wKm;
+  }, 0);
   const stravaKm = (window.STRAVA_RUNS||[]).reduce((s,a)=>s+(a.distance||0)/1000, 0);
   const pctKm   = totalKm > 0 ? Math.min(100, Math.round(stravaKm/totalKm*100)) : 0;
 
@@ -2246,7 +2250,10 @@ function buildCompData() {
     var _wd = new Date(+_wp[0], +_wp[1]-1, +_wp[2]);
     var lbl = _wd.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
     planLabels.push(lbl);
-    planKm.push(w.km||0);
+    // Chercher kmTarget, km, ou calculer depuis les sessions
+    var wKm = w.kmTarget || w.km || 0;
+    if(!wKm && w.sessions) wKm = w.sessions.reduce(function(s,se){ return s+parseFloat(se.dist||se.distKm||0); }, 0);
+    planKm.push(+wKm.toFixed(1));
     var _wsp = w.weekStart.split('-');
     var wStart = new Date(+_wsp[0], +_wsp[1]-1, +_wsp[2]).getTime();
     // Km réalisés uniquement pour les semaines passées ou en cours

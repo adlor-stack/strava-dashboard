@@ -1833,7 +1833,7 @@ function applyPlan(data){
       else if(ws&&ws<=today&&today<=we)st='current';
       weeks.push({
         num:w.num,weekStart:w.weekStart,dates:w.weekStart?fmtRange(w.weekStart):'',
-        phase:w.phaseLabel||w.phase||'',status:st,km:w.kmTarget||0,
+        phase:w.phaseLabel||w.phase||'',status:st,km:w.kmTarget||w.km||0,
         sessions:(w.sessions||[]).map(function(s){return{
           day:dayLbl(w.weekStart,s.dayOffset),dayOffset:s.dayOffset||0,
           type:s.type||'easy',name:s.name||'',dist:String(s.distKm||''),
@@ -2294,7 +2294,7 @@ window.applyPlan = function applyPlan(data) {
     weeks.push({
       num:w.num, weekStart:w.weekStart,
       dates:w.weekStart?fmtRange(w.weekStart):'',
-      phase:w.phaseLabel||w.phase||'', status:status, km:w.kmTarget||0,
+      phase:w.phaseLabel||w.phase||'', status:status, km:w.kmTarget||w.km||0,
       sessions:(w.sessions||[]).map(function(s){
         return {
           day:dayLbl(w.weekStart,s.dayOffset), dayOffset:s.dayOffset||0,

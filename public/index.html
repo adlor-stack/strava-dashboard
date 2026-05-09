@@ -1168,7 +1168,7 @@ async function renderWeekBlock(containerId, weekIdx) {
   if(!container) return;
   const week = weeks[weekIdx];
   // Charger la météo
-  const weather = await fetchWeather();
+  const weather = typeof fetchWeather==="function" ? await fetchWeather() : (typeof window.fetchWeather==="function" ? await window.fetchWeather() : {});
   if(!week) {
     container.innerHTML = '<div style="border:1px solid var(--bd);border-radius:10px;padding:20px;text-align:center;font-size:12px;color:var(--tx3)">Aucune séance planifiée</div>';
     return;
@@ -1220,7 +1220,7 @@ async function renderWeekBlock(containerId, weekIdx) {
         </div>
         ${(function(){
           var p=sessDate.getFullYear()+'-'+String(sessDate.getMonth()+1).padStart(2,'0')+'-'+String(sessDate.getDate()).padStart(2,'0');
-          return weatherBadge(p, weather);
+          return typeof window.weatherBadge==="function" ? window.weatherBadge(p, weather) : "";
         })()}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
@@ -2337,10 +2337,10 @@ window.exportCurrentPlan = function() {
 // MÉTÉO — Open-Meteo (Paris fixe)
 // ══════════════════════════════════════════════
 
-var _weatherCache = null;
-var _weatherFetchTime = 0;
+window._weatherCache = null;
+window._weatherFetchTime = 0;
 
-function weatherCodeToIcon(code) {
+window.weatherCodeToIcon = function(code) {
   if(code === 0) return '☀️';
   if(code <= 2)  return '🌤️';
   if(code <= 3)  return '☁️';
@@ -2354,7 +2354,7 @@ function weatherCodeToIcon(code) {
   return '🌡️';
 }
 
-function weatherCodeToLabel(code) {
+window.weatherCodeToLabel = function(code) {
   if(code === 0) return 'Ensoleillé';
   if(code <= 2)  return 'Peu nuageux';
   if(code <= 3)  return 'Couvert';
@@ -2368,10 +2368,10 @@ function weatherCodeToLabel(code) {
   return '—';
 }
 
-async function fetchWeather() {
+window.fetchWeather = async function() {
   // Cache 1h
   const now = Date.now();
-  if(_weatherCache && now - _weatherFetchTime < 3600000) return _weatherCache;
+  if(window._weatherCache && now - window._weatherFetchTime < 3600000) return window._weatherCache;
   try {
     const url = 'https://api.open-meteo.com/v1/forecast'
       + '?latitude=48.8566&longitude=2.3522'
@@ -2390,8 +2390,8 @@ async function fetchWeather() {
         wind:  Math.round(d.daily.windspeed_10m_max[i]),
       };
     });
-    _weatherCache = byDate;
-    _weatherFetchTime = now;
+    window._weatherCache = byDate;
+    window._weatherFetchTime = now;
     return byDate;
   } catch(e) {
     console.warn('Météo fetch failed:', e);
@@ -2399,7 +2399,7 @@ async function fetchWeather() {
   }
 }
 
-function weatherBadge(dateStr, weather) {
+window.weatherBadge = function(dateStr, weather) {
   // dateStr = 'YYYY-MM-DD'
   if(!weather || !weather[dateStr]) return '';
   var w = weather[dateStr];

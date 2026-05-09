@@ -1213,7 +1213,7 @@ async function renderWeekBlock(containerId, weekIdx) {
     var leftBdr = isToday ? 'border-left:3px solid var(--or);' : 'border-left:3px solid transparent;';
     var opacity = isPast && !entry ? 'opacity:.45;' : '';
 
-    html += '<div style="display:grid;grid-template-columns:50px 1fr;align-items:start;gap:10px;padding:9px 14px;border-bottom:1px solid #f5f5f5;background:' + rowBg + ';' + leftBdr + opacity + '">'
+    html += '<div style="display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f5f5f5;background:' + rowBg + ';' + leftBdr + opacity + '">'
       + '<div style="text-align:center;flex-shrink:0;padding-top:2px">'
       + '<div style="font-size:9px;font-weight:600;text-transform:uppercase;color:' + (isToday?'var(--or)':'var(--tx3)') + '">' + dayName + '</div>'
       + '<div style="font-size:20px;font-weight:800;line-height:1.1;color:' + (isToday?'var(--or)':'var(--tx)') + '">' + dayNum + '</div>'
@@ -1236,14 +1236,19 @@ async function renderWeekBlock(containerId, weekIdx) {
         + (s.dist?'📏 '+s.dist+' km ':'') + (s.dur?'⏱ '+s.dur+' min ':'') + (s.target?'🎯 '+s.target:'')
         + '</div>'
         + meteo
-        + '<div style="margin-top:5px;display:flex;gap:4px;align-items:center">'
+      ;
+      // Fermer le div contenu et ouvrir la 3ème colonne actions
+      html += '</div>'  // fin div contenu
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
         + badge
         + '<button class="edit-btn" onclick="openModal(' + weekIdx + ',' + si + ')" style="padding:2px 6px;font-size:9px">✎</button>'
         + '</div>';
     } else {
       // Jour de repos
       html += '<div style="font-size:11px;color:var(--tx3);font-style:italic;padding-top:3px">Repos</div>'
-        + meteo;
+        + meteo
+        + '</div>'  // fin div contenu
+        + '<div></div>';  // 3ème colonne vide
     }
 
     html += '</div></div>';

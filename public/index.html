@@ -1922,7 +1922,7 @@ window.addEventListener('load',async function(){
 // PERSISTANCE — Upstash Redis via /api/data
 // ══════════════════════════════════════════════
 
-async function kvGet(key) {
+window.kvGet = async function kvGet(key) {
   try {
     const r = await fetch('/api/data?key=' + encodeURIComponent(key), {
       cache: 'no-store',
@@ -1937,7 +1937,7 @@ async function kvGet(key) {
   }
 }
 
-async function kvSet(key, value) {
+window.kvSet = async function kvSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
   try {
     await fetch('/api/data', {

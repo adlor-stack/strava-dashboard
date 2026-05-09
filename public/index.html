@@ -2250,7 +2250,7 @@ function weekMonday(dateStr) {
   var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   return y+'-'+m+'-'+dd;
 }
-function applyPlan(data) {
+window.applyPlan = function applyPlan(data) {
   window.PLAN_META = data;
   var g = data.goal||{};
   if(g.type) OBJ.type=g.type;

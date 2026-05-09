@@ -1167,69 +1167,89 @@ async function renderWeekBlock(containerId, weekIdx) {
   const container = document.getElementById(containerId);
   if(!container) return;
   const week = weeks[weekIdx];
-  // Charger la météo
-  const weather = typeof fetchWeather==="function" ? await fetchWeather() : (typeof window.fetchWeather==="function" ? await window.fetchWeather() : {});
   if(!week) {
     container.innerHTML = '<div style="border:1px solid var(--bd);border-radius:10px;padding:20px;text-align:center;font-size:12px;color:var(--tx3)">Aucune séance planifiée</div>';
     return;
   }
+
+  // Charger météo
+  const weather = typeof window.fetchWeather==='function' ? await window.fetchWeather() : {};
+
   const today = new Date(); today.setHours(0,0,0,0);
-  const wStart = week.weekStart ? new Date(week.weekStart) : getMonday(weekIdx === currentWeekIdx() ? 0 : 1);
+  const wStart = week.weekStart ? new Date(week.weekStart.split('-')[0], week.weekStart.split('-')[1]-1, week.weekStart.split('-')[2]) : new Date();
   wStart.setHours(0,0,0,0);
   const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+6);
   const isCurrentWeek = today >= wStart && today <= wEnd;
-  const DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-  const MONTHS_FR  = ['jan','fév','mar','avr','mai','jun','jul','août','sep','oct','nov','déc'];
 
-  let html = `<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;box-shadow:var(--sh)">
-    <div style="background:${isCurrentWeek?'var(--or-l)':'var(--bg)'};border-bottom:1px solid ${isCurrentWeek?'var(--or-m)':'var(--bd)'};padding:12px 16px">
-      <div style="font-size:10px;font-weight:700;color:${isCurrentWeek?'var(--or)':'var(--tx2)'};text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${isCurrentWeek?'Cette semaine':'Semaine suivante'} — S${week.num}</div>
-      <div style="font-size:12px;color:var(--tx2)">${week.dates||fmtDateRange(wStart)}</div>
-    </div>
-    <div>`;
+  const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  const MONTHS_FR = ['jan','fév','mar','avr','mai','jun','jul','août','sep','oct','nov','déc'];
 
-  week.sessions.forEach((s, si) => {
-    const sessDate = new Date(wStart);
-    sessDate.setDate(wStart.getDate() + (s.dayOffset||0));
-    sessDate.setHours(0,0,0,0);
-    const isToday = sessDate.getTime() === today.getTime();
-    const isPast  = sessDate < today && !isToday;
-    const tp = STYPES[s.type] || STYPES.easy;
-    const dayName = DAYS_SHORT[sessDate.getDay()];
-    const dayNum  = sessDate.getDate();
-    const monthStr= MONTHS_FR[sessDate.getMonth()];
-    const status  = matchSession(s, week.weekStart);
-    const badge   = status ? sessBadge(status) : null;
-    const rowBg   = isToday ? '#fff8f0' : (status==='validated' ? '#f0fdf5' : (status==='done' ? '#fffbeb' : 'transparent'));
-    const leftBdr = isToday ? 'border-left:3px solid var(--or);' : '';
-    const opacity = isPast && !status ? 'opacity:.5;' : '';
-    html += `<div style="display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f5f5f5;background:${rowBg};${leftBdr}${opacity}">
-      <div style="text-align:center;flex-shrink:0">
-        <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:${isToday?'var(--or)':'var(--tx3)'};">${dayName}</div>
-        <div style="font-size:22px;font-weight:800;line-height:1.1;color:${isToday?'var(--or)':'var(--tx)'};">${dayNum}</div>
-        <div style="font-size:9px;color:var(--tx3);">${monthStr}</div>
-      </div>
-      <div style="min-width:0">
-        <div style="font-size:12px;font-weight:500;margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          <span class="stype ${tp.c}" style="font-size:8px">${tp.l}</span>
-          <span>${s.name}</span>
-          ${isToday?'<span style="font-size:8px;font-weight:700;color:var(--or);background:var(--or-l);padding:1px 5px;border-radius:6px">Auj.</span>':''}
-        </div>
-        <div style="font-size:10px;color:var(--tx3)">
-          ${s.dist?'📏 '+s.dist+' km':''} ${s.dur?'· ⏱ '+s.dur+' min':''} ${s.target?'· 🎯 '+s.target:''}
-        </div>
-        ${(function(){
-          var p=sessDate.getFullYear()+'-'+String(sessDate.getMonth()+1).padStart(2,'0')+'-'+String(sessDate.getDate()).padStart(2,'0');
-          return typeof window.weatherBadge==="function" ? window.weatherBadge(p, weather) : "";
-        })()}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${badge || ''}
-        <button class="edit-btn" onclick="openModal(${weekIdx},${si})" style="padding:3px 6px;font-size:9px">✎</button>
-      </div>
-    </div>`;
+  // Construire un map dayOffset → session
+  const sessByOffset = {};
+  (week.sessions||[]).forEach(function(s, si) {
+    sessByOffset[s.dayOffset||0] = {s:s, si:si};
   });
-  html += `</div></div>`;
+
+  let html = '<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;box-shadow:var(--sh)">'
+    + '<div style="background:' + (isCurrentWeek?'var(--or-l)':'var(--bg)') + ';border-bottom:1px solid ' + (isCurrentWeek?'var(--or-m)':'var(--bd)') + ';padding:12px 16px">'
+    + '<div style="font-size:10px;font-weight:700;color:' + (isCurrentWeek?'var(--or)':'var(--tx2)') + ';text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">'
+    + (isCurrentWeek?'Cette semaine':'Semaine suivante') + ' — S' + week.num + '</div>'
+    + '<div style="font-size:12px;color:var(--tx2)">' + (week.dates||'') + '</div>'
+    + '</div><div>';
+
+  // Afficher les 7 jours (lundi=0 à dimanche=6)
+  for(var offset=0; offset<7; offset++) {
+    var dayDate = new Date(wStart); dayDate.setDate(wStart.getDate()+offset);
+    var isToday = dayDate.getTime() === today.getTime();
+    var isPast  = dayDate < today && !isToday;
+    var dateStr = dayDate.getFullYear()+'-'+String(dayDate.getMonth()+1).padStart(2,'0')+'-'+String(dayDate.getDate()).padStart(2,'0');
+    var dayName = DAYS_FR[dayDate.getDay()];
+    var dayNum  = dayDate.getDate();
+    var monthStr = MONTHS_FR[dayDate.getMonth()];
+    var meteo = typeof window.weatherBadge==='function' ? window.weatherBadge(dateStr, weather) : '';
+    var entry = sessByOffset[offset];
+
+    var rowBg = isToday ? '#fff8f0' : 'transparent';
+    var leftBdr = isToday ? 'border-left:3px solid var(--or);' : 'border-left:3px solid transparent;';
+    var opacity = isPast && !entry ? 'opacity:.45;' : '';
+
+    html += '<div style="display:grid;grid-template-columns:50px 1fr;align-items:start;gap:10px;padding:9px 14px;border-bottom:1px solid #f5f5f5;background:' + rowBg + ';' + leftBdr + opacity + '">'
+      + '<div style="text-align:center;flex-shrink:0;padding-top:2px">'
+      + '<div style="font-size:9px;font-weight:600;text-transform:uppercase;color:' + (isToday?'var(--or)':'var(--tx3)') + '">' + dayName + '</div>'
+      + '<div style="font-size:20px;font-weight:800;line-height:1.1;color:' + (isToday?'var(--or)':'var(--tx)') + '">' + dayNum + '</div>'
+      + '<div style="font-size:9px;color:var(--tx3)">' + monthStr + '</div>'
+      + '</div>'
+      + '<div style="min-width:0">';
+
+    if(entry) {
+      var s = entry.s, si = entry.si;
+      var STYPES = {easy:{l:'Endurance',c:'stype-easy'},tempo:{l:'Tempo',c:'stype-tempo'},frac:{l:'Fractionné',c:'stype-frac'},long:{l:'Sortie longue',c:'stype-long'},recup:{l:'Récupération',c:'stype-recup'},race:{l:'Course',c:'stype-race'}};
+      var tp = STYPES[s.type]||STYPES.easy;
+      var status = typeof matchSession==='function' ? matchSession(s, week.weekStart) : null;
+      var badge  = status && typeof sessBadge==='function' ? sessBadge(status) : '';
+      html += '<div style="font-size:12px;font-weight:500;margin-bottom:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
+        + '<span class="stype ' + tp.c + '" style="font-size:8px">' + tp.l + '</span>'
+        + '<span>' + s.name + '</span>'
+        + (isToday?'<span style="font-size:8px;font-weight:700;color:var(--or);background:var(--or-l);padding:1px 5px;border-radius:6px">Auj.</span>':'')
+        + '</div>'
+        + '<div style="font-size:10px;color:var(--tx3);margin-bottom:2px">'
+        + (s.dist?'📏 '+s.dist+' km ':'') + (s.dur?'⏱ '+s.dur+' min ':'') + (s.target?'🎯 '+s.target:'')
+        + '</div>'
+        + meteo
+        + '<div style="margin-top:5px;display:flex;gap:4px;align-items:center">'
+        + badge
+        + '<button class="edit-btn" onclick="openModal(' + weekIdx + ',' + si + ')" style="padding:2px 6px;font-size:9px">✎</button>'
+        + '</div>';
+    } else {
+      // Jour de repos
+      html += '<div style="font-size:11px;color:var(--tx3);font-style:italic;padding-top:3px">Repos</div>'
+        + meteo;
+    }
+
+    html += '</div></div>';
+  }
+
+  html += '</div></div>';
   container.innerHTML = html;
 }
 

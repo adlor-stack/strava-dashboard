@@ -1959,9 +1959,11 @@ async function loadFromKV() {
   console.log('[loadFromKV] objRaw:', objRaw);
   
   if(hrRaw != null) {
-    try { localStorage.setItem('hrRest', hrRaw); } catch {}
+    try { localStorage.setItem('hrRest', String(hrRaw)); } catch {}
     const inp = document.getElementById('hrrest-input');
     if(inp) inp.value = hrRaw;
+    // Mettre à jour l'affichage VO2max immédiatement
+    if(typeof updateVO2 === 'function') updateVO2(hrRaw);
   }
   if(objRaw && typeof objRaw === 'object') {
     Object.assign(OBJ, objRaw);

@@ -1163,10 +1163,12 @@ function fmtDateRange(monday) {
   return monday.toLocaleDateString('fr-FR', opts) + ' — ' + sunday.toLocaleDateString('fr-FR', opts);
 }
 
-function renderWeekBlock(containerId, weekIdx) {
+async function renderWeekBlock(containerId, weekIdx) {
   const container = document.getElementById(containerId);
   if(!container) return;
   const week = weeks[weekIdx];
+  // Charger la météo
+  const weather = await fetchWeather();
   if(!week) {
     container.innerHTML = '<div style="border:1px solid var(--bd);border-radius:10px;padding:20px;text-align:center;font-size:12px;color:var(--tx3)">Aucune séance planifiée</div>';
     return;
@@ -1216,6 +1218,10 @@ function renderWeekBlock(containerId, weekIdx) {
         <div style="font-size:10px;color:var(--tx3)">
           ${s.dist?'📏 '+s.dist+' km':''} ${s.dur?'· ⏱ '+s.dur+' min':''} ${s.target?'· 🎯 '+s.target:''}
         </div>
+        ${(function(){
+          var p=sessDate.getFullYear()+'-'+String(sessDate.getMonth()+1).padStart(2,'0')+'-'+String(sessDate.getDate()).padStart(2,'0');
+          return weatherBadge(p, weather);
+        })()}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         ${badge || ''}
@@ -1244,10 +1250,10 @@ function currentWeekIdx() {
   return 0;
 }
 
-function renderUpcoming() {
+async function renderUpcoming() {
   const ci = currentWeekIdx();
-  renderWeekBlock('week-block-1', ci);
-  renderWeekBlock('week-block-2', ci+1 < weeks.length ? ci+1 : ci);
+  await renderWeekBlock('week-block-1', ci);
+  await renderWeekBlock('week-block-2', ci+1 < weeks.length ? ci+1 : ci);
 }
 
 
@@ -2325,6 +2331,89 @@ window.exportCurrentPlan = function() {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
 };
+
+
+// ══════════════════════════════════════════════
+// MÉTÉO — Open-Meteo (Paris fixe)
+// ══════════════════════════════════════════════
+
+var _weatherCache = null;
+var _weatherFetchTime = 0;
+
+function weatherCodeToIcon(code) {
+  if(code === 0) return '☀️';
+  if(code <= 2)  return '🌤️';
+  if(code <= 3)  return '☁️';
+  if(code <= 49) return '🌫️';
+  if(code <= 57) return '🌦️';
+  if(code <= 67) return '🌧️';
+  if(code <= 77) return '🌨️';
+  if(code <= 82) return '🌧️';
+  if(code <= 86) return '❄️';
+  if(code <= 99) return '⛈️';
+  return '🌡️';
+}
+
+function weatherCodeToLabel(code) {
+  if(code === 0) return 'Ensoleillé';
+  if(code <= 2)  return 'Peu nuageux';
+  if(code <= 3)  return 'Couvert';
+  if(code <= 49) return 'Brouillard';
+  if(code <= 57) return 'Bruine';
+  if(code <= 67) return 'Pluie';
+  if(code <= 77) return 'Neige';
+  if(code <= 82) return 'Averses';
+  if(code <= 86) return 'Neige';
+  if(code <= 99) return 'Orage';
+  return '—';
+}
+
+async function fetchWeather() {
+  // Cache 1h
+  const now = Date.now();
+  if(_weatherCache && now - _weatherFetchTime < 3600000) return _weatherCache;
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast'
+      + '?latitude=48.8566&longitude=2.3522'
+      + '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max'
+      + '&timezone=Europe%2FParis&forecast_days=14';
+    const r = await fetch(url);
+    const d = await r.json();
+    // Construire un dict date → météo
+    const byDate = {};
+    (d.daily.time || []).forEach(function(date, i) {
+      byDate[date] = {
+        code:  d.daily.weathercode[i],
+        tmax:  Math.round(d.daily.temperature_2m_max[i]),
+        tmin:  Math.round(d.daily.temperature_2m_min[i]),
+        rain:  d.daily.precipitation_probability_max[i],
+        wind:  Math.round(d.daily.windspeed_10m_max[i]),
+      };
+    });
+    _weatherCache = byDate;
+    _weatherFetchTime = now;
+    return byDate;
+  } catch(e) {
+    console.warn('Météo fetch failed:', e);
+    return {};
+  }
+}
+
+function weatherBadge(dateStr, weather) {
+  // dateStr = 'YYYY-MM-DD'
+  if(!weather || !weather[dateStr]) return '';
+  var w = weather[dateStr];
+  var icon = weatherCodeToIcon(w.code);
+  var label = weatherCodeToLabel(w.code);
+  var rainCol = w.rain > 60 ? '#ef4444' : w.rain > 30 ? '#f97316' : '#6b7280';
+  return '<div style="display:flex;align-items:center;gap:4px;margin-top:4px;font-size:10px;color:var(--tx2)">'
+    + '<span style="font-size:14px">' + icon + '</span>'
+    + '<span style="font-weight:600">' + w.tmax + '°</span>'
+    + '<span style="color:#a0a0a0">' + w.tmin + '°</span>'
+    + (w.rain > 0 ? '<span style="color:' + rainCol + '">💧' + w.rain + '%</span>' : '')
+    + (w.wind > 20 ? '<span style="color:#6b7280">💨' + w.wind + 'km/h</span>' : '')
+    + '</div>';
+}
 
 // Boot
 document.addEventListener('DOMContentLoaded', function() {

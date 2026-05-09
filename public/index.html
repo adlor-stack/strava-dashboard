@@ -693,7 +693,14 @@ function vo2MarkerPct(vo2){ return Math.min(95, Math.max(5, ((vo2-20)/55)*100));
 
 // FC repos depuis localStorage
 function loadHRRest(){ return parseInt(localStorage.getItem('hrRest')||'60'); }
-function saveHRRest(){ const v=parseInt(document.getElementById('hrrest-input').value); localStorage.setItem('hrRest',v); const el=document.getElementById('hrrest-saved'); el.style.display='inline'; setTimeout(()=>el.style.display='none',2000); updateVO2(v); }
+function saveHRRest(){
+  const v = parseInt(document.getElementById('hrrest-input').value);
+  localStorage.setItem('hrRest', v);
+  if(typeof kvSet === 'function') kvSet('hrRest', v).catch(function(){});
+  const el = document.getElementById('hrrest-saved');
+  if(el){ el.style.display='inline'; setTimeout(function(){ el.style.display='none'; }, 2000); }
+  if(typeof updateVO2 === 'function') updateVO2(v);
+}
 function updateVO2(hrRest){
   hrRest=parseInt(hrRest);
   const vo2=computeVO2(hrRest);
@@ -1433,6 +1440,11 @@ function saveModal(){
     }
     renderPlan();
     renderUpcoming();
+    // Sauvegarder le plan modifié dans KV
+    if(typeof kvSet === 'function' && typeof window.PLAN_META !== 'undefined') {
+      window.PLAN_META.weeks = weeks.map(function(w){ return Object.assign({}, w); });
+      kvSet('imported_plan', window.PLAN_META).catch(function(){});
+    }
   }
   closeModal();
 }
@@ -2081,7 +2093,7 @@ function injectStravaData(activities) {
   window.STRAVA_RUNS = runs;
   window._weekMonday = weekMonday;
   // Calculer REFS depuis toutes les activités (pas seulement depuis startDate)
-  computeREFS(activities);  // exposer pour buildCompData
+  computeREFS(runs);  // exposer pour buildCompData
 
   // Stats
   var totKm=runs.reduce(function(s,a){return s+(a.distance||0);},0)/1000;
